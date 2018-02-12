@@ -1,44 +1,89 @@
 import argparse
-import cmd2
-from configparser import ConfigParser
-
-from os.path import isfile, join
-
-import sys
-
 import os
-from pip.utils.appdirs import user_config_dir, user_data_dir
+from os.path import isfile, join
+from urllib.parse import urlparse
 
-from clanvas import Clanvas
+import canvasapi
+import cmd2
+from colorama import Fore, Style
+from tabulate import tabulate
+
 
 class ClanvasCmd(cmd2.Cmd):
 
-    debug = True
-
-    prompt = property(lambda self: self.clanvas.get_prompt())
-
     def __init__(self):
         super(ClanvasCmd, self).__init__()
-        self.clanvas = None
 
-    def do_login(self, line):
-        if self.clanvas is not None:
+        self.url = None
+        self.host = None
+        self.canvas = None
+
+        self.home = os.path.expanduser("~")
+
+        self.current_course = None
+        self.current_directory = self.home
+
+        self.__courses = None
+        self.__current_user_profile = None
+
+    def get_courses(self, invalidate=False):
+        if self.__courses is None or invalidate:
+            sorter = lambda course: (-course.enrollment_term_id, course.name)
+            self.__courses = sorted(self.canvas.get_current_user().get_courses(), key=sorter)
+
+        return self.__courses
+
+    def current_user_profile(self, invalidate=False):
+        if self.__current_user_profile is None or invalidate:
+            self.__current_user_profile = self.canvas.get_current_user().get_profile()
+
+        return self.__current_user_profile
+
+    @staticmethod
+    def course_info_items(c):
+        return [c.course_code, c.id, c.start_at_date.strftime("%b %y") if hasattr(c, 'start_at_date') else '', c.name]
+
+    # cmd2 attribute, made dynamic with get_prompt()
+    prompt = property(lambda self: self.get_prompt())
+
+    prompt_string = Fore.LIGHTGREEN_EX + '{login_id}@{host}' + Style.RESET_ALL + ':' + Fore.MAGENTA + '{pwc}' + Style.RESET_ALL + ':' + Fore.CYAN + '{pwd} ' + Style.RESET_ALL + '$ '
+
+    def get_prompt(self):
+        if self.canvas is None:
+            return '$ '
+
+        login_id = self.current_user_profile()['login_id']
+        host = self.host
+        pwc = self.current_course.course_code.replace(' ', '') if self.current_course is not None else '~'
+        pwd = self.current_directory.replace(self.home, '~')
+
+        return self.prompt_string.format(
+            login_id=login_id,
+            host=host,
+            pwc=pwc,
+            pwd=pwd
+        )
+
+    login_parser = argparse.ArgumentParser()
+    login_parser.add_argument('url', help='URL of Canvas server')
+    login_parser.add_argument('token', help='Canvas API access token')
+
+    @cmd2.with_argparser(login_parser)
+    def do_login(self, opts):
+        if self.canvas is not None:
             print('Already logged in.')
             return False
 
-        items = line.split()
-        if not len(items) == 2:
-            print('Please provide a URL and a valid token.')
-            return False
+        self.url = opts.url
+        self.host = urlparse(opts.url).netloc
 
-        url = items[0]
-        token = items[1]
+        self.canvas = canvasapi.Canvas(opts.url, opts.token)
 
-        self.clanvas = Clanvas(url, token)
-        self.clanvas.login_info()
+        profile = self.current_user_profile()
+        print('Logged in as {:s} ({:s})'.format(profile['name'], profile['login_id']))
 
-    def do_whoami(self, line):
-        self.clanvas.whoami(line == '-v')
+    def do_ls(self, line):
+        pass
 
     lc_parser = argparse.ArgumentParser()
     lc_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms)')
@@ -47,28 +92,44 @@ class ClanvasCmd(cmd2.Cmd):
 
     @cmd2.with_argparser(lc_parser)
     def do_lc(self, opts):
-        self.clanvas.list_courses(all=opts.all, long=opts.long, invalidate=opts.invalidate)
+        courses = self.get_courses(opts.invalidate)
 
-    def do_cc(self, course_string):
-        if course_string == '':
-            print('Please specify a course (try lc).')
+        if opts.all:
+            display_courses = courses
+        else:
+            latest_term = max(course.enrollment_term_id for course in courses)
+            display_courses = filter(lambda course: course.enrollment_term_id == latest_term, courses)
+
+        if opts.long:
+            print(tabulate(map(ClanvasCmd.course_info_items, display_courses), tablefmt='plain'))
+        else:
+            print('\n'.join([course.course_code for course in display_courses]))
+
+    cc_parser = argparse.ArgumentParser()
+    cc_parser.add_argument('course', nargs='?', default='', help='course id or matching course string (e.g. the course code)')
+
+    @cmd2.with_argparser(cc_parser)
+    def do_cc(self, opts):
+        if opts.course is '' or opts.course is '~':
+            self.current_course = None
             return False
 
-        courses = self.clanvas.get_courses()
-        match_courses = [course for course in courses if course.id == int(course_string)]
+        courses = self.get_courses()
+        match_courses = [course for course in courses if course.id == int(opts.course)]
 
         if len(match_courses) > 1:
             print('Ambiguous course info, matched multiple courses.')
         elif len(match_courses) < 1:
             print('Could not find a matching course')
         else:
-            self.clanvas.change_course(match_courses[0].id)
+            matched_course_id = match_courses[0].id
+            self.current_course = next(course for course in self.get_courses() if course.id == matched_course_id)
 
         return False
 
     def complete_cc(self, text, line, begidx, endidx):
         query = line[3:].replace(' ', '').lower()
-        courses = self.clanvas.get_courses()
+        courses = self.get_courses()
 
         digest_cache = {}
 
@@ -76,13 +137,23 @@ class ClanvasCmd(cmd2.Cmd):
         def queryable_digest(course):
             nonlocal digest_cache
             if course.id not in digest_cache:
-                digest_cache[course.id] = ''.join([str(item) for item in Clanvas.list_long_row(course)]).replace(' ', '').lower()
+                digest_cache[course.id] = ''.join([str(item) for item in ClanvasCmd.course_info_items(course)]).replace(' ', '').lower()
             return digest_cache[course.id]
 
         return [str(course.id) for course in courses if query in queryable_digest(course)]
 
-    def do_EOF(self, line):
-        return True
+    whoami_parser = argparse.ArgumentParser()
+    whoami_parser.add_argument('-v', '--verbose', action='store_true', help='display more info about the logged in user')
+
+    @cmd2.with_argparser(whoami_parser)
+    def do_whoami(self, opts):
+        profile = self.canvas.get_current_user().get_profile()
+
+        if not opts.verbose:
+            print(profile['name'] + ' (' + profile['login_id'] + ')')
+        else:
+            verbose_fields = ['name', 'short_name', 'login_id', 'primary_email', 'id', 'time_zone']
+            print('\n'.join([field + ': ' + str(profile[field]) for field in verbose_fields]))
 
 
 rc_file = join(os.path.expanduser('~'), '.clanvasrc')
