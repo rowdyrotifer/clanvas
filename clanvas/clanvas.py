@@ -4,6 +4,8 @@ from urllib.parse import urlparse
 from canvasapi import Canvas
 from tabulate import tabulate
 
+from colorama import Fore
+from colorama import Style
 
 class Clanvas(object):
 
@@ -20,14 +22,19 @@ class Clanvas(object):
         self.home = os.path.expanduser("~")
         self.current_directory = self.home
 
+    prompt_string = Fore.LIGHTGREEN_EX + '{login_id}@{host}' + Style.RESET_ALL + ':' + Fore.MAGENTA + '{pwc}' + Style.RESET_ALL + ':' + Fore.CYAN + '{pwd} ' + Style.RESET_ALL + '$ '
+
     def get_prompt(self):
-        current_user_profile = self.__current_user_profile()
-        prompt = current_user_profile['login_id'] + '@' + self.host
-        if self.current_course is not None:
-            prompt += ':' + self.current_course.course_code.replace(' ', '')
-        prompt += ':' + self.current_directory.replace(self.home, '~')
-        prompt += '$ '
-        return prompt
+        login_id = self.__current_user_profile()['login_id']
+        host = self.host
+        pwc = self.current_course.course_code.replace(' ', '') if self.current_course is not None else '~'
+        pwd = self.current_directory.replace(self.home, '~')
+        return self.prompt_string.format(
+            login_id=login_id,
+            host=host,
+            pwc=pwc,
+            pwd=pwd
+        )
 
     def get_courses(self, invalidate=False):
         if self.__courses is None or invalidate:

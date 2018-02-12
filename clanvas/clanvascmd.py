@@ -1,30 +1,15 @@
 import argparse
 import cmd2
-import configparser
+from configparser import ConfigParser
 
-import os
-
-from os.path import isfile
+from os.path import isfile, join
 
 import sys
-from pip.utils import appdirs
+
+import os
+from pip.utils.appdirs import user_config_dir, user_data_dir
 
 from clanvas import Clanvas
-
-
-def clanvas_config_dir():
-    return appdirs.user_config_dir('clanvas', 'clanvas')
-
-def clanvas_config_file():
-    return os.path.join(clanvas_config_dir(), 'clanvas.conf')
-
-def clanvas_data_dir():
-    return appdirs.user_data_dir('clanvas', 'clanvas')
-
-def clanvas_config() -> configparser.ConfigParser:
-        config = configparser.ConfigParser()
-        config.read(clanvas_config_file())
-        return config
 
 class ClanvasCmd(cmd2.Cmd):
 
@@ -100,15 +85,10 @@ class ClanvasCmd(cmd2.Cmd):
         return True
 
 
+rc_file = join(os.path.expanduser('~'), '.clanvasrc')
+
 if __name__ == '__main__':
-    if not isfile(clanvas_config_file()):
-        print('Please create ' + clanvas_config_file())
-        sys.exit(0)
-
-    config = clanvas_config()
-    url = config.get('Clanvas', 'url')
-    token = config.get('Clanvas', 'token')
-
     cmd = ClanvasCmd()
-    cmd.onecmd('login ' + url + ' ' + token)
+    if isfile(rc_file):
+        cmd.onecmd('load ' + rc_file)
     cmd.cmdloop()
