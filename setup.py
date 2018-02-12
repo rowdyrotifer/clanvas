@@ -7,6 +7,6 @@ setup(
     license='LICENSE',
     author='Mark Lalor',
     author_email='markwlalor@gmail.com',
-    install_requires=['canvasapi', 'cmd2', 'tabulate', 'colorama'],
+    install_requires=['canvasapi', 'cmd2', 'tabulate', 'colorama', 'pytz', 'tzlocal'],
     description='Command-line client for Canvas by Instructure '
 )
