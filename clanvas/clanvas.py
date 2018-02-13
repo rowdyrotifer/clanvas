@@ -1,4 +1,5 @@
 import argparse
+import functools
 import os
 from os.path import isfile, join
 from urllib.parse import urlparse
@@ -13,12 +14,26 @@ from tzlocal import get_localzone
 
 local_tz = get_localzone()
 
+complete_cd = functools.partialmethod(cmd2.Cmd.path_complete, dir_only=True)
+complete_cat = functools.partialmethod(cmd2.Cmd.path_complete, dir_only=False)
+
+# For specifying tab-completion for default shell commands
+# TODO: add basically everything from GNU Coreutils http://www.gnu.org/software/coreutils/manual/html_node/index.html
+completion_map_dir_only = ['cd']
+completion_map_dir_file = ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 'tail', 'ls']
+
 # Extend the course object to have a readable-yet-unique code that is course code + id
 Course.unique_course_code = property(lambda self: self.course_code.replace(' ', '') + '-' + str(self.id))
 
 class Clanvas(cmd2.Cmd):
+    default_to_shell = True
 
     def __init__(self):
+        for command in completion_map_dir_only:
+            setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.Cmd.path_complete, dir_only=True))
+        for command in completion_map_dir_file:
+            setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.Cmd.path_complete, dir_only=False))
+
         super(Clanvas, self).__init__()
 
         self.url = None
@@ -66,7 +81,7 @@ class Clanvas(cmd2.Cmd):
     # cmd2 attribute, made dynamic with get_prompt()
     prompt = property(lambda self: self.get_prompt())
 
-    prompt_string = Fore.LIGHTGREEN_EX + '{login_id}@{host}' + Style.RESET_ALL + ':' + Fore.MAGENTA + '{pwc}' + Style.RESET_ALL + ':' + Fore.CYAN + '{pwd} ' + Style.RESET_ALL + '$ '
+    prompt_string = Fore.LIGHTGREEN_EX + '{login_id}@{host}' + Style.RESET_ALL + ':' + Fore.YELLOW + '{pwc}' + Style.RESET_ALL + ':' + Fore.BLUE + '{pwd} ' + Style.RESET_ALL + '$ '
 
     def get_prompt(self):
         if self.canvas is None:
@@ -75,7 +90,7 @@ class Clanvas(cmd2.Cmd):
         login_id = self.current_user_profile()['login_id']
         host = self.host
         pwc = self.current_course.course_code if self.current_course is not None else '~'
-        pwd = self.current_directory.replace(self.home, '~')
+        pwd = os.getcwd().replace(self.home, '~')
 
         return self.prompt_string.format(
             login_id=login_id,
@@ -92,6 +107,28 @@ class Clanvas(cmd2.Cmd):
     #    \_____\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|___/
     #
 
+    # Reimplement POSIX cd to call os.chdir
+
+    cd_parser = argparse.ArgumentParser()
+    cd_parser.add_argument('directory', nargs='?', default='', help='absolute or relative pathname of the directory that shall become the new working directory')
+
+    @cmd2.with_argparser(cd_parser)
+    def do_cd(self, opts):
+        if opts.directory == '':
+            path = os.path.expanduser('~')
+        else:
+            path = os.path.abspath(os.path.expanduser(opts.directory))
+
+        if not os.path.isdir(path):
+            self.poutput(f'cd: no such file or directory: {path}')
+        elif not os.access(path, os.R_OK):
+            self.poutput(f'cd: permission denied: {path}')
+        else:
+            try:
+                os.chdir(path)
+            except Exception as ex:
+                self.poutput('{}'.format(ex))
+
     la_parser = argparse.ArgumentParser()
     la_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms)')
     la_parser.add_argument('-l', '--long', action='store_true', help='long listing')
@@ -99,15 +136,15 @@ class Clanvas(cmd2.Cmd):
     @cmd2.with_argparser(la_parser)
     def do_la(self, opts):
         if self.current_course is None:
-            print('Please select a course')
+            self.poutput('Please select a course')
             return False
 
         display_assignments = self.current_course.get_assignments()
 
         if opts.long:
-            print(tabulate(map(Clanvas.assignment_info_items, display_assignments), tablefmt='plain'))
+            self.poutput(tabulate(map(Clanvas.assignment_info_items, display_assignments), tablefmt='plain'))
         else:
-            print('\n'.join([assignment.name for assignment in display_assignments]))
+            self.poutput('\n'.join([assignment.name for assignment in display_assignments]))
 
     login_parser = argparse.ArgumentParser()
     login_parser.add_argument('url', help='URL of Canvas server')
@@ -116,7 +153,7 @@ class Clanvas(cmd2.Cmd):
     @cmd2.with_argparser(login_parser)
     def do_login(self, opts):
         if self.canvas is not None:
-            print('Already logged in.')
+            self.poutput('Already logged in.')
             return False
 
         self.url = opts.url
@@ -125,10 +162,7 @@ class Clanvas(cmd2.Cmd):
         self.canvas = Canvas(opts.url, opts.token)
 
         profile = self.current_user_profile()
-        print('Logged in as {:s} ({:s})'.format(profile['name'], profile['login_id']))
-
-    def do_ls(self, line):
-        pass
+        self.poutput('Logged in as {:s} ({:s})'.format(profile['name'], profile['login_id']))
 
     lc_parser = argparse.ArgumentParser()
     lc_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms)')
@@ -146,9 +180,9 @@ class Clanvas(cmd2.Cmd):
             display_courses = filter(lambda course: course.enrollment_term_id == latest_term, courses)
 
         if opts.long:
-            print(tabulate(map(Clanvas.course_info_items, display_courses), tablefmt='plain'))
+            self.poutput(tabulate(map(Clanvas.course_info_items, display_courses), tablefmt='plain'))
         else:
-            print('\n'.join([course.course_code for course in display_courses]))
+            self.poutput('\n'.join([c.unique_course_code for c in display_courses]))
 
     cc_parser = argparse.ArgumentParser()
     cc_parser.add_argument('course', nargs='?', default='', help='course id or matching course string (e.g. the course code)')
@@ -166,31 +200,29 @@ class Clanvas(cmd2.Cmd):
         if num_matches == 1:
             self.current_course = matched_courses[0]
         elif num_matches > 1:
-            print('Ambiguous input "{:s}".'.format(opts.course))
-            print('Please select an option:')
+            self.poutput('Ambiguous input "{:s}".'.format(opts.course))
+            self.poutput('Please select an option:')
 
             pad_length = len(str(num_matches)) + 2
             format_str = '{:<' + str(pad_length) + '}{}'
 
-            print(format_str.format('0)', 'cancel'))
+            self.poutput(format_str.format('0)', 'cancel'))
             count = 1
             for course in matched_courses:
-                print(format_str.format(f'{count})', course.unique_course_code))
+                self.poutput(format_str.format(f'{count})', course.unique_course_code))
                 count += 1
 
             choice = input('Enter number: ')
             if choice.isdigit():
                 num_choice = int(choice)
                 if num_choice > num_matches:
-                    print(f'Choice {num_choice} greater than last choice ({num_matches}).')
+                    self.poutput(f'Choice {num_choice} greater than last choice ({num_matches}).')
                 elif num_choice != 0:
                     self.current_course = matched_courses[num_choice - 1]
             else:
-                print(f'Choice {choice} is not numeric.')
+                self.poutput(f'Choice {choice} is not numeric.')
         else:
-            print('Could not find a matching course.')
-
-        return False
+            self.poutput('Could not find a matching course.')
 
     def complete_cc(self, text, line, begidx, endidx):
         query = line[3:].replace(' ', '').lower()
@@ -206,10 +238,10 @@ class Clanvas(cmd2.Cmd):
         profile = self.canvas.get_current_user().get_profile()
 
         if not opts.verbose:
-            print(profile['name'] + ' (' + profile['login_id'] + ')')
+            self.poutput(profile['name'] + ' (' + profile['login_id'] + ')')
         else:
             verbose_fields = ['name', 'short_name', 'login_id', 'primary_email', 'id', 'time_zone']
-            print('\n'.join([field + ': ' + str(profile[field]) for field in verbose_fields]))
+            self.poutput('\n'.join([field + ': ' + str(profile[field]) for field in verbose_fields]))
 
 
 rc_file = join(os.path.expanduser('~'), '.clanvasrc')
