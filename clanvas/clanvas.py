@@ -4,31 +4,34 @@ from os.path import isfile, join
 from urllib.parse import urlparse
 
 import cmd2
+import colorama
 from canvasapi import Canvas
 from canvasapi.course import Course
 from colorama import Fore, Style
 from tabulate import tabulate
-
-import pytz
 from tzlocal import get_localzone
 
 local_tz = get_localzone()
 
-class ClanvasCmd(cmd2.Cmd):
+# Extend the course object to have a readable-yet-unique code that is course code + id
+Course.unique_course_code = property(lambda self: self.course_code.replace(' ', '') + '-' + str(self.id))
+
+class Clanvas(cmd2.Cmd):
 
     def __init__(self):
-        super(ClanvasCmd, self).__init__()
+        super(Clanvas, self).__init__()
 
         self.url = None
         self.host = None
-        self.canvas = None # type: Canvas
+        self.canvas = None  # type: Canvas
 
         self.home = os.path.expanduser("~")
 
-        self.current_course = None #type: Course
+        self.current_course = None  # type: Course
         self.current_directory = self.home
 
         self.__courses = None
+        self.__courses_digest_cache = {}
         self.__current_user_profile = None
 
     def get_courses(self, invalidate=False):
@@ -49,8 +52,16 @@ class ClanvasCmd(cmd2.Cmd):
         return [c.course_code, c.id, c.start_at_date.strftime("%b %y") if hasattr(c, 'start_at_date') else '', c.name]
 
     @staticmethod
+    def course_query_items(c):
+        return [c.course_code, c.id, c.unique_course_code, c.name]
+
+    @staticmethod
     def assignment_info_items(a):
         return [a.id, a.due_at_date.astimezone(local_tz).strftime("%a, %d %b %I:%M%p") if hasattr(a, 'due_at_date') else '', a.name]
+
+    @staticmethod
+    def query_courses(courses, query):
+        return filter(lambda course: any([query in str(item) for item in Clanvas.course_query_items(course)]), courses)
 
     # cmd2 attribute, made dynamic with get_prompt()
     prompt = property(lambda self: self.get_prompt())
@@ -63,7 +74,7 @@ class ClanvasCmd(cmd2.Cmd):
 
         login_id = self.current_user_profile()['login_id']
         host = self.host
-        pwc = self.current_course.course_code.replace(' ', '') if self.current_course is not None else '~'
+        pwc = self.current_course.course_code if self.current_course is not None else '~'
         pwd = self.current_directory.replace(self.home, '~')
 
         return self.prompt_string.format(
@@ -81,14 +92,6 @@ class ClanvasCmd(cmd2.Cmd):
     #    \_____\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|___/
     #
 
-    # ann_parser = argparse.ArgumentParser()
-    # @cmd2.with_argparser(ann_parser)
-    # def do_ann(self, opts):
-    #     if self.current_course is None:
-    #         print('Please select a course')
-    #         return False
-    #
-
     la_parser = argparse.ArgumentParser()
     la_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms)')
     la_parser.add_argument('-l', '--long', action='store_true', help='long listing')
@@ -102,11 +105,9 @@ class ClanvasCmd(cmd2.Cmd):
         display_assignments = self.current_course.get_assignments()
 
         if opts.long:
-            print(tabulate(map(ClanvasCmd.assignment_info_items, display_assignments), tablefmt='plain'))
+            print(tabulate(map(Clanvas.assignment_info_items, display_assignments), tablefmt='plain'))
         else:
             print('\n'.join([assignment.name for assignment in display_assignments]))
-
-
 
     login_parser = argparse.ArgumentParser()
     login_parser.add_argument('url', help='URL of Canvas server')
@@ -145,7 +146,7 @@ class ClanvasCmd(cmd2.Cmd):
             display_courses = filter(lambda course: course.enrollment_term_id == latest_term, courses)
 
         if opts.long:
-            print(tabulate(map(ClanvasCmd.course_info_items, display_courses), tablefmt='plain'))
+            print(tabulate(map(Clanvas.course_info_items, display_courses), tablefmt='plain'))
         else:
             print('\n'.join([course.course_code for course in display_courses]))
 
@@ -159,15 +160,35 @@ class ClanvasCmd(cmd2.Cmd):
             return False
 
         courses = self.get_courses()
-        match_courses = [course for course in courses if course.id == int(opts.course)]
+        matched_courses = list(Clanvas.query_courses(courses, opts.course))
+        num_matches = len(matched_courses)
 
-        if len(match_courses) > 1:
-            print('Ambiguous course info, matched multiple courses.')
-        elif len(match_courses) < 1:
-            print('Could not find a matching course')
+        if num_matches == 1:
+            self.current_course = matched_courses[0]
+        elif num_matches > 1:
+            print('Ambiguous input "{:s}".'.format(opts.course))
+            print('Please select an option:')
+
+            pad_length = len(str(num_matches)) + 2
+            format_str = '{:<' + str(pad_length) + '}{}'
+
+            print(format_str.format('0)', 'cancel'))
+            count = 1
+            for course in matched_courses:
+                print(format_str.format(f'{count})', course.unique_course_code))
+                count += 1
+
+            choice = input('Enter number: ')
+            if choice.isdigit():
+                num_choice = int(choice)
+                if num_choice > num_matches:
+                    print(f'Choice {num_choice} greater than last choice ({num_matches}).')
+                elif num_choice != 0:
+                    self.current_course = matched_courses[num_choice - 1]
+            else:
+                print(f'Choice {choice} is not numeric.')
         else:
-            matched_course_id = match_courses[0].id
-            self.current_course = next(course for course in self.get_courses() if course.id == matched_course_id)
+            print('Could not find a matching course.')
 
         return False
 
@@ -175,16 +196,7 @@ class ClanvasCmd(cmd2.Cmd):
         query = line[3:].replace(' ', '').lower()
         courses = self.get_courses()
 
-        digest_cache = {}
-
-        # get a searchable string with all the data we want for autocomplete options
-        def queryable_digest(course):
-            nonlocal digest_cache
-            if course.id not in digest_cache:
-                digest_cache[course.id] = ''.join([str(item) for item in ClanvasCmd.course_info_items(course)]).replace(' ', '').lower()
-            return digest_cache[course.id]
-
-        return [str(course.id) for course in courses if query in queryable_digest(course)]
+        return [course.unique_course_code for course in Clanvas.query_courses(courses, query)]
 
     whoami_parser = argparse.ArgumentParser()
     whoami_parser.add_argument('-v', '--verbose', action='store_true', help='display more info about the logged in user')
@@ -203,7 +215,9 @@ class ClanvasCmd(cmd2.Cmd):
 rc_file = join(os.path.expanduser('~'), '.clanvasrc')
 
 if __name__ == '__main__':
-    cmd = ClanvasCmd()
+    colorama.init()  # Windows color support
+
+    cmd = Clanvas()
     if isfile(rc_file):
         cmd.onecmd('load ' + rc_file)
     cmd.cmdloop()
