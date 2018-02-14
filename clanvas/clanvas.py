@@ -1,11 +1,13 @@
 import argparse
 import functools
 import os
+from datetime import datetime
 from os.path import isfile, join
 from urllib.parse import urlparse
 
 import cmd2
 import colorama
+import pytz
 from canvasapi import Canvas
 from canvasapi.course import Course
 from colorama import Fore, Style
@@ -25,6 +27,7 @@ completion_map_dir_file = ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 
 # Extend the course object to have a readable-yet-unique code that is course code + id
 Course.unique_course_code = property(lambda self: self.course_code.replace(' ', '') + '-' + str(self.id))
 
+
 class Clanvas(cmd2.Cmd):
     default_to_shell = True
 
@@ -33,6 +36,8 @@ class Clanvas(cmd2.Cmd):
             setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.Cmd.path_complete, dir_only=True))
         for command in completion_map_dir_file:
             setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.Cmd.path_complete, dir_only=False))
+
+        self.settable.update({'prompt_string': 'prompt format string'})
 
         super(Clanvas, self).__init__()
 
@@ -46,7 +51,6 @@ class Clanvas(cmd2.Cmd):
         self.current_directory = self.home
 
         self.__courses = None
-        self.__courses_digest_cache = {}
         self.__current_user_profile = None
 
     def get_courses(self, invalidate=False):
@@ -87,17 +91,13 @@ class Clanvas(cmd2.Cmd):
         if self.canvas is None:
             return '$ '
 
-        login_id = self.current_user_profile()['login_id']
-        host = self.host
-        pwc = self.current_course.course_code if self.current_course is not None else '~'
-        pwd = os.getcwd().replace(self.home, '~')
-
         return self.prompt_string.format(
-            login_id=login_id,
-            host=host,
-            pwc=pwc,
-            pwd=pwd
+            login_id=(self.current_user_profile()['login_id']),
+            host=(self.host),
+            pwc=(self.current_course.course_code if self.current_course is not None else '~'),
+            pwd=(os.getcwd().replace(self.home, '~'))
         )
+
 
     #     _____                                          _
     #    / ____|                                        | |
@@ -132,6 +132,7 @@ class Clanvas(cmd2.Cmd):
     la_parser = argparse.ArgumentParser()
     la_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms)')
     la_parser.add_argument('-l', '--long', action='store_true', help='long listing')
+    la_parser.add_argument('-u', '--upcoming', action='store_true', help='show only upcoming assignments')
 
     @cmd2.with_argparser(la_parser)
     def do_la(self, opts):
@@ -140,6 +141,10 @@ class Clanvas(cmd2.Cmd):
             return False
 
         display_assignments = self.current_course.get_assignments()
+
+        if opts.upcoming:
+            now = pytz.UTC.localize(datetime.now())
+            display_assignments = filter(lambda assignment: assignment.due_at_date >= now, display_assignments)
 
         if opts.long:
             self.poutput(tabulate(map(Clanvas.assignment_info_items, display_assignments), tablefmt='plain'))
