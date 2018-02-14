@@ -1,7 +1,9 @@
 import argparse
 import functools
 import os
+from collections import defaultdict
 from datetime import datetime
+from operator import itemgetter
 from os.path import isfile, join
 from urllib.parse import urlparse
 
@@ -12,6 +14,7 @@ from canvasapi import Canvas
 from canvasapi.course import Course
 from colorama import Fore, Style
 from tabulate import tabulate
+from tree_format import format_tree
 from tzlocal import get_localzone
 
 local_tz = get_localzone()
@@ -26,6 +29,15 @@ completion_map_dir_file = ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 
 
 # Extend the course object to have a readable-yet-unique code that is course code + id
 Course.unique_course_code = property(lambda self: self.course_code.replace(' ', '') + '-' + str(self.id))
+
+def tabulate_dict(item_to_list, items):
+    tabulate_list = tabulate(map(item_to_list, items), tablefmt='plain').split('\n')
+    result = {}
+    i = 0
+    for item in items:
+        result[item] = tabulate_list[i]
+        i += 1
+    return result
 
 
 class Clanvas(cmd2.Cmd):
@@ -77,6 +89,10 @@ class Clanvas(cmd2.Cmd):
     @staticmethod
     def assignment_info_items(a):
         return [a.id, a.due_at_date.astimezone(local_tz).strftime("%a, %d %b %I:%M%p") if hasattr(a, 'due_at_date') else '', a.name]
+
+    @staticmethod
+    def submission_info_items(s):
+        return [s.id, s.score if hasattr(s, 'score') else '']
 
     @staticmethod
     def query_courses(courses, query):
@@ -132,6 +148,7 @@ class Clanvas(cmd2.Cmd):
     la_parser = argparse.ArgumentParser()
     la_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms)')
     la_parser.add_argument('-l', '--long', action='store_true', help='long listing')
+    la_parser.add_argument('-s', '--submissions', action='store_true', help='show submissions')
     la_parser.add_argument('-u', '--upcoming', action='store_true', help='show only upcoming assignments')
 
     @cmd2.with_argparser(la_parser)
@@ -140,14 +157,32 @@ class Clanvas(cmd2.Cmd):
             self.poutput('Please select a course')
             return False
 
-        display_assignments = self.current_course.get_assignments()
+        course = self.current_course
+
+        display_assignments = course.get_assignments()
 
         if opts.upcoming:
             now = pytz.UTC.localize(datetime.now())
             display_assignments = filter(lambda assignment: assignment.due_at_date >= now, display_assignments)
 
         if opts.long:
-            self.poutput(tabulate(map(Clanvas.assignment_info_items, display_assignments), tablefmt='plain'))
+            if opts.submissions:
+                assignment_ids = map(lambda assignment: assignment.id, display_assignments)
+                assignment_submissions = course.list_multiple_submissions(assignment_ids=assignment_ids)
+
+                submissions_by_assignment = defaultdict(list)
+
+                tabulated_submissions = tabulate_dict(Clanvas.submission_info_items, assignment_submissions)
+                for submission, formatted in tabulated_submissions.items():
+                    submissions_by_assignment[submission.assignment_id].append((formatted, []))
+
+                tabulated_assignments = tabulate_dict(Clanvas.assignment_info_items, display_assignments)
+
+                tree = (course.unique_course_code, [(formatted, submissions_by_assignment[assignment.id]) for assignment, formatted in tabulated_assignments.items()])
+
+                self.poutput(format_tree(tree, format_node=itemgetter(0), get_children=itemgetter(1)))
+            else:
+                self.poutput(tabulate(map(Clanvas.assignment_info_items, display_assignments), tablefmt='plain'))
         else:
             self.poutput('\n'.join([assignment.name for assignment in display_assignments]))
 
