@@ -5,6 +5,7 @@ import os
 
 import pytz
 from canvasapi.course import Course
+from canvasapi.exceptions import Unauthorized
 from canvasapi.file import File
 from canvasapi.folder import Folder
 from os.path import join
@@ -32,7 +33,7 @@ def length_file_tree(folder: FileTree) -> int:
     return sum(map(length_file_tree, folder.folders)) + len(folder.files)
 
 
-class FileSync(Outputter):
+class FileSynchronizer(Outputter):
     def pull_file_tree(self, directory, tree):
         pathlib.Path(join(directory, tree.path)).mkdir(parents=True, exist_ok=True)
 
@@ -51,8 +52,11 @@ class FileSync(Outputter):
 
     def pull_all_files(self, directory, course: Course):
         top_level_folder = next(folder for folder in course.list_folders() if folder.parent_folder_id is None)
-        tree = build_canvas_file_tree('.', top_level_folder)
+        try:
+            tree = build_canvas_file_tree('.', top_level_folder)
+            self.poutput_verbose('Detected ' + str(length_file_tree(tree)) + ' files.')
+            self.pull_file_tree(directory, tree)
+        except Unauthorized:
+            self.poutput('Not authorized to access this course\'s files')
 
-        self.poutput_verbose('Detected ' + str(length_file_tree(tree)) + ' files.')
 
-        self.pull_file_tree(directory, tree)

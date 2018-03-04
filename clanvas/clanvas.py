@@ -16,7 +16,8 @@ from colorama import Fore, Style
 from tabulate import tabulate
 from tree_format import format_tree
 
-import filesync
+import filesynchronizer
+import lister
 from outputter import Verbosity
 import utils
 from utils import cached_invalidatable
@@ -28,13 +29,6 @@ class Clanvas(cmd2.Cmd):
     def __init__(self):
         # For specifying tab-completion for default shell commands
         # TODO: add basically everything from GNU Coreutils http://www.gnu.org/software/coreutils/manual/html_node/index.html
-        completion_map_dir_only = ['cd']
-        completion_map_dir_file = ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 'tail', 'ls']
-
-        for command in completion_map_dir_only:
-            setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.Cmd.path_complete, dir_only=True))
-        for command in completion_map_dir_file:
-            setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.Cmd.path_complete, dir_only=False))
 
         self.settable.update({'prompt_string': 'prompt format string'})
 
@@ -50,7 +44,8 @@ class Clanvas(cmd2.Cmd):
         self.current_directory = self.home
 
         general_output_fn = functools.partial(self.poutput, end='')
-        self.filesync = filesync.FileSync(general_output_fn, self.get_verbosity)
+        self.file_synchronizer = filesynchronizer.FileSynchronizer(general_output_fn, self.get_verbosity)
+        self.lister = lister.Lister(general_output_fn, self.get_verbosity)
 
     @cached_invalidatable
     def get_courses(self, **kwargs):
@@ -72,7 +67,6 @@ class Clanvas(cmd2.Cmd):
         return Verbosity[self.verbosity]
 
     def get_prompt(self):
-
         if self.canvas is None:
             return '$ '
 
@@ -94,7 +88,8 @@ class Clanvas(cmd2.Cmd):
     # Reimplement POSIX cd to call os.chdir
 
     cd_parser = argparse.ArgumentParser()
-    cd_parser.add_argument('directory', nargs='?', default='', help='absolute or relative pathname of the directory that shall become the new working directory')
+    cd_parser.add_argument('directory', nargs='?', default='',
+                           help='absolute or relative pathname of the directory that shall become the new working directory')
 
     @cmd2.with_argparser(cd_parser)
     def do_cd(self, opts):
@@ -113,45 +108,28 @@ class Clanvas(cmd2.Cmd):
             except Exception as ex:
                 self.poutput('{}'.format(ex))
 
+    lc_parser = argparse.ArgumentParser()
+    lc_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms)')
+    lc_parser.add_argument('-l', '--long', action='store_true', help='long listing')
+    lc_parser.add_argument('-i', '--invalidate', action='store_true', help='invalidate cached course info')
+
+    @cmd2.with_argparser(lc_parser)
+    def do_lc(self, opts):
+        courses = self.get_courses(invalidate=opts.invalidate)
+        kwargs = dict(vars(opts))
+        del kwargs['invalidate']
+        self.lister.list_courses(courses, **kwargs)
+
     la_parser = argparse.ArgumentParser()
-    la_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms)')
     la_parser.add_argument('-l', '--long', action='store_true', help='long listing')
     la_parser.add_argument('-s', '--submissions', action='store_true', help='show submissions')
     la_parser.add_argument('-u', '--upcoming', action='store_true', help='show only upcoming assignments')
+    la_parser = utils.argparser_course_optional(la_parser)
 
-    @cmd2.with_argparser(utils.argparser_course_optional(la_parser))
+    @cmd2.with_argparser(la_parser)
     @utils.argparser_course_optional_wrapper
     def do_la(self, opts):
-        if opts.course is None:
-            self.poutput('No course specified.')
-            return False
-
-        display_assignments = opts.course.get_assignments()
-
-        if opts.upcoming:
-            now = pytz.UTC.localize(datetime.now())
-            display_assignments = filter(lambda assignment: assignment.due_at_date >= now, display_assignments)
-
-        if opts.long:
-            if opts.submissions:
-                assignment_ids = map(lambda assignment: assignment.id, display_assignments)
-                assignment_submissions = opts.course.list_multiple_submissions(assignment_ids=assignment_ids)
-
-                submissions_by_assignment = defaultdict(list)
-
-                tabulated_submissions = utils.tabulate_dict(utils.submission_info_items, assignment_submissions)
-                for submission, formatted in tabulated_submissions.items():
-                    submissions_by_assignment[submission.assignment_id].append((formatted, []))
-
-                tabulated_assignments = utils.tabulate_dict(utils.assignment_info_items, display_assignments)
-
-                tree = (utils.unique_course_code(opts.course), [(formatted, submissions_by_assignment[assignment.id]) for assignment, formatted in tabulated_assignments.items()])
-
-                self.poutput(format_tree(tree, format_node=itemgetter(0), get_children=itemgetter(1)))
-            else:
-                self.poutput(tabulate(map(utils.assignment_info_items, display_assignments), tablefmt='plain'))
-        else:
-            self.poutput('\n'.join([assignment.name for assignment in display_assignments]))
+        return self.lister.list_assignments(**vars(opts))
 
     login_parser = argparse.ArgumentParser()
     login_parser.add_argument('url', help='URL of Canvas server')
@@ -171,28 +149,9 @@ class Clanvas(cmd2.Cmd):
         profile = self.current_user_profile()
         self.poutput('Logged in as {:s} ({:s})'.format(profile['name'], profile['login_id']))
 
-    lc_parser = argparse.ArgumentParser()
-    lc_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms)')
-    lc_parser.add_argument('-l', '--long', action='store_true', help='long listing')
-    lc_parser.add_argument('-i', '--invalidate', action='store_true', help='invalidate cached course info')
-
-    @cmd2.with_argparser(lc_parser)
-    def do_lc(self, opts):
-        courses = self.get_courses(invalidate=opts.invalidate)
-
-        if opts.all:
-            display_courses = courses
-        else:
-            latest_term = max(course.enrollment_term_id for course in courses)
-            display_courses = filter(lambda course: course.enrollment_term_id == latest_term, courses)
-
-        if opts.long:
-            self.poutput(tabulate(map(utils.course_info_items, display_courses), tablefmt='plain'))
-        else:
-            self.poutput('\n'.join([utils.unique_course_code(c) for c in display_courses]))
-
     cc_parser = argparse.ArgumentParser()
-    cc_parser.add_argument('course', nargs='?', default='', help='course id or matching course string (e.g. the course code)')
+    cc_parser.add_argument('course', nargs='?', default='',
+                           help='course id or matching course string (e.g. the course code)')
 
     @cmd2.with_argparser(cc_parser)
     def do_cc(self, opts):
@@ -213,7 +172,8 @@ class Clanvas(cmd2.Cmd):
         return [utils.unique_course_code(course) for course in utils.filter_courses(courses, query)]
 
     whoami_parser = argparse.ArgumentParser()
-    whoami_parser.add_argument('-v', '--verbose', action='store_true', help='display more info about the logged in user')
+    whoami_parser.add_argument('-v', '--verbose', action='store_true',
+                               help='display more info about the logged in user')
 
     @cmd2.with_argparser(whoami_parser)
     def do_whoami(self, opts):
@@ -226,6 +186,7 @@ class Clanvas(cmd2.Cmd):
             self.poutput('\n'.join([field + ': ' + str(profile[field]) for field in verbose_fields]))
 
     pullf_parser = argparse.ArgumentParser()
+
     @cmd2.with_argparser(utils.argparser_course_optional(pullf_parser))
     @utils.argparser_course_optional_wrapper
     def do_pullf(self, opts):
@@ -236,15 +197,24 @@ class Clanvas(cmd2.Cmd):
         unique_course_code = utils.unique_course_code(opts.course)
         files_directory = join(*[os.path.expanduser('~'), 'canvas', 'courses', unique_course_code, 'files'])
 
-        self.filesync.pull_all_files(files_directory, opts.course)
+        self.file_synchronizer.pull_all_files(files_directory, opts.course)
 
 
-rc_file = join(os.path.expanduser('~'), '.clanvasrc')
+completion_map_dir_only = ['cd']
+completion_map_dir_file = ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 'tail', 'ls']
+
+for command in completion_map_dir_only:
+    setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.Cmd.path_complete, dir_only=True))
+for command in completion_map_dir_file:
+    setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.Cmd.path_complete, dir_only=False))
 
 if __name__ == '__main__':
     colorama.init()  # Windows color support
 
     cmd = Clanvas()
+
+    rc_file = join(os.path.expanduser('~'), '.clanvasrc')
     if isfile(rc_file):
         cmd.onecmd('load ' + rc_file)
+
     cmd.cmdloop()
