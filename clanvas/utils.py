@@ -1,5 +1,6 @@
 import datetime
 import functools
+from collections import defaultdict
 
 import pytz
 from tabulate import tabulate
@@ -42,6 +43,14 @@ def argparser_course_optional_wrapper(with_argparser):
         with_argparser(self, opts)
 
     return inject_argparser
+
+
+def rstrip_zeroes(float):
+    return ('%f' % float).rstrip('0').rstrip('.')
+
+
+def compact_datetime(datetime):
+    return datetime.astimezone(get_localzone()).strftime("%m-%d %I:%M%p")
 
 
 def unique_course_code(course):
@@ -115,3 +124,15 @@ def get_course_by_query(clanvas, query, fail_on_ambiguous=False, quiet=False):
             clanvas.poutput('Could not find a matching course.' if not fail_on_ambiguous else 'Ambiguous course query string.')
 
     return None
+
+
+def get_submissions_by_assignment(course, display_assignments):
+    assignment_ids = map(lambda assignment: assignment.id, display_assignments)
+    assignment_submissions = course.list_multiple_submissions(assignment_ids=assignment_ids)
+
+    submissions_by_assignment = defaultdict(list)
+
+    for submission in assignment_submissions:
+        submissions_by_assignment[submission.assignment_id].append(submission)
+
+    return submissions_by_assignment

@@ -1,25 +1,19 @@
 import argparse
 import functools
 import os
-from collections import defaultdict
-from datetime import datetime
-from operator import itemgetter
 from os.path import isfile, join
 from urllib.parse import urlparse
 
 import cmd2
 import colorama
-import pytz
 from canvasapi import Canvas
 from canvasapi.course import Course
 from colorama import Fore, Style
-from tabulate import tabulate
-from tree_format import format_tree
 
 import filesynchronizer
 import lister
-from outputter import Verbosity
 import utils
+from outputter import Verbosity
 from utils import cached_invalidatable
 
 
@@ -27,10 +21,8 @@ class Clanvas(cmd2.Cmd):
     default_to_shell = True
 
     def __init__(self):
-        # For specifying tab-completion for default shell commands
-        # TODO: add basically everything from GNU Coreutils http://www.gnu.org/software/coreutils/manual/html_node/index.html
-
         self.settable.update({'prompt_string': 'prompt format string'})
+        self.settable.update({'verbosity': 'default command verbosity (NORMAL/VERBOSE/DEBUG)'})
 
         super(Clanvas, self).__init__()
 
@@ -131,6 +123,16 @@ class Clanvas(cmd2.Cmd):
     def do_la(self, opts):
         return self.lister.list_assignments(**vars(opts))
 
+    lg_parser = argparse.ArgumentParser()
+    lg_parser.add_argument('-l', '--long', action='store_true', help='long listing')
+    lg_parser = utils.argparser_course_optional(lg_parser)
+
+    @cmd2.with_argparser(lg_parser)
+    @utils.argparser_course_optional_wrapper
+    def do_lg(self, opts):
+        return self.lister.list_grades(**vars(opts))
+
+
     login_parser = argparse.ArgumentParser()
     login_parser.add_argument('url', help='URL of Canvas server')
     login_parser.add_argument('token', help='Canvas API access token')
@@ -199,6 +201,9 @@ class Clanvas(cmd2.Cmd):
 
         self.file_synchronizer.pull_all_files(files_directory, opts.course)
 
+
+# For specifying tab-completion for default shell commands
+# TODO: add basically everything from GNU Coreutils http://www.gnu.org/software/coreutils/manual/html_node/index.html
 
 completion_map_dir_only = ['cd']
 completion_map_dir_file = ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 'tail', 'ls']
