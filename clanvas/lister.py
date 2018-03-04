@@ -79,3 +79,13 @@ class Lister(Outputter):
                 return [assignment.name, fraction, percentage]
 
         self.poutput(tabulate(map(tabulate_row, display_assignments), tablefmt='plain'))
+
+        return False
+
+    def list_announcements(self, course: Course, number=5, time=None):
+        if course is None:
+            self.poutput('No course specified.')
+            return False
+
+
+        return False

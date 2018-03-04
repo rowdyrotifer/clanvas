@@ -41,22 +41,22 @@ class Clanvas(cmd2.Cmd):
 
     @cached_invalidatable
     def get_courses(self, **kwargs):
-        return sorted(self.canvas.get_current_user().get_courses(),
+        return sorted(self.canvas.get_current_user().get_courses(include=['term', 'total_scores']),
                       key=lambda course: (-course.enrollment_term_id, course.name))
 
     @cached_invalidatable
     def current_user_profile(self, **kwargs):
         return self.canvas.get_current_user().get_profile()
 
-    # cmd2 attribute, made dynamic with get_prompt()
-    prompt = property(lambda self: self.get_prompt())
-
-    prompt_string = Fore.LIGHTGREEN_EX + '{login_id}@{host}' + Style.RESET_ALL + ':' + Fore.YELLOW + '{pwc}' + Style.RESET_ALL + ':' + Fore.BLUE + '{pwd} ' + Style.RESET_ALL + '$ '
-
     verbosity = 'NORMAL'
 
     def get_verbosity(self) -> Verbosity:
         return Verbosity[self.verbosity]
+
+    # cmd2 attribute, made dynamic with get_prompt()
+    prompt = property(lambda self: self.get_prompt())
+
+    prompt_string = Fore.LIGHTGREEN_EX + '{login_id}@{host}' + Style.RESET_ALL + ':' + Fore.YELLOW + '{pwc}' + Style.RESET_ALL + ':' + Fore.BLUE + '{pwd} ' + Style.RESET_ALL + '$ '
 
     def get_prompt(self):
         if self.canvas is None:
@@ -79,7 +79,7 @@ class Clanvas(cmd2.Cmd):
 
     # Reimplement POSIX cd to call os.chdir
 
-    cd_parser = argparse.ArgumentParser()
+    cd_parser = argparse.ArgumentParser(description='Change the working directory.')
     cd_parser.add_argument('directory', nargs='?', default='',
                            help='absolute or relative pathname of the directory that shall become the new working directory')
 
@@ -100,7 +100,7 @@ class Clanvas(cmd2.Cmd):
             except Exception as ex:
                 self.poutput('{}'.format(ex))
 
-    lc_parser = argparse.ArgumentParser()
+    lc_parser = argparse.ArgumentParser(description='List courses.')
     lc_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms)')
     lc_parser.add_argument('-l', '--long', action='store_true', help='long listing')
     lc_parser.add_argument('-i', '--invalidate', action='store_true', help='invalidate cached course info')
@@ -112,7 +112,7 @@ class Clanvas(cmd2.Cmd):
         del kwargs['invalidate']
         self.lister.list_courses(courses, **kwargs)
 
-    la_parser = argparse.ArgumentParser()
+    la_parser = argparse.ArgumentParser(description='List course assignments.')
     la_parser.add_argument('-l', '--long', action='store_true', help='long listing')
     la_parser.add_argument('-s', '--submissions', action='store_true', help='show submissions')
     la_parser.add_argument('-u', '--upcoming', action='store_true', help='show only upcoming assignments')
@@ -123,7 +123,7 @@ class Clanvas(cmd2.Cmd):
     def do_la(self, opts):
         return self.lister.list_assignments(**vars(opts))
 
-    lg_parser = argparse.ArgumentParser()
+    lg_parser = argparse.ArgumentParser(description='List course grades.')
     lg_parser.add_argument('-l', '--long', action='store_true', help='long listing')
     lg_parser = utils.argparser_course_optional(lg_parser)
 
@@ -132,8 +132,17 @@ class Clanvas(cmd2.Cmd):
     def do_lg(self, opts):
         return self.lister.list_grades(**vars(opts))
 
+    lan_parser = argparse.ArgumentParser(description='List course announcements.')
+    lan_parser.add_argument('-n', '--number', nargs=1, type=int, default=5, help='long listing')
+    lan_parser.add_argument('-t', '--time', nargs=1, type=int, default=None, help='long listing')
+    lan_parser = utils.argparser_course_optional(lan_parser)
 
-    login_parser = argparse.ArgumentParser()
+    @cmd2.with_argparser(lan_parser)
+    @utils.argparser_course_optional_wrapper
+    def do_lan(self, opts):
+        return self.lister.list_announcements(**vars(opts))
+
+    login_parser = argparse.ArgumentParser(description='Set URL and token to use for all Canvas API calls')
     login_parser.add_argument('url', help='URL of Canvas server')
     login_parser.add_argument('token', help='Canvas API access token')
 
@@ -187,7 +196,7 @@ class Clanvas(cmd2.Cmd):
             verbose_fields = ['name', 'short_name', 'login_id', 'primary_email', 'id', 'time_zone']
             self.poutput('\n'.join([field + ': ' + str(profile[field]) for field in verbose_fields]))
 
-    pullf_parser = argparse.ArgumentParser()
+    pullf_parser = argparse.ArgumentParser(description='Pull course files to local disk.')
 
     @cmd2.with_argparser(utils.argparser_course_optional(pullf_parser))
     @utils.argparser_course_optional_wrapper

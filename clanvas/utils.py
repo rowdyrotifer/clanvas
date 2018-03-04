@@ -58,7 +58,7 @@ def unique_course_code(course):
 
 
 def course_info_items(c):
-    return [c.course_code, c.id, c.start_at_date.strftime("%b %y") if hasattr(c, 'start_at_date') else '', c.name]
+    return [c.course_code, c.id, c.term['name'] if hasattr(c, 'term') else '', c.name]
 
 
 def assignment_info_items(a):
