@@ -16,6 +16,8 @@ from colorama import Fore, Style
 from tabulate import tabulate
 from tree_format import format_tree
 
+import filesync
+from outputter import Verbosity
 import utils
 from utils import cached_invalidatable
 
@@ -47,6 +49,9 @@ class Clanvas(cmd2.Cmd):
         self.current_course = None  # type: Course
         self.current_directory = self.home
 
+        general_output_fn = functools.partial(self.poutput, end='')
+        self.filesync = filesync.FileSync(general_output_fn, self.get_verbosity)
+
     @cached_invalidatable
     def get_courses(self, **kwargs):
         return sorted(self.canvas.get_current_user().get_courses(),
@@ -60,6 +65,11 @@ class Clanvas(cmd2.Cmd):
     prompt = property(lambda self: self.get_prompt())
 
     prompt_string = Fore.LIGHTGREEN_EX + '{login_id}@{host}' + Style.RESET_ALL + ':' + Fore.YELLOW + '{pwc}' + Style.RESET_ALL + ':' + Fore.BLUE + '{pwd} ' + Style.RESET_ALL + '$ '
+
+    verbosity = 'NORMAL'
+
+    def get_verbosity(self) -> Verbosity:
+        return Verbosity[self.verbosity]
 
     def get_prompt(self):
 
@@ -192,7 +202,7 @@ class Clanvas(cmd2.Cmd):
 
         courses = self.get_courses()
 
-        match = utils.get_course_by_query(courses, opts.course)
+        match = utils.get_course_by_query(self, opts.course)
         if match is not None:
             self.current_course = match
 
@@ -214,6 +224,19 @@ class Clanvas(cmd2.Cmd):
         else:
             verbose_fields = ['name', 'short_name', 'login_id', 'primary_email', 'id', 'time_zone']
             self.poutput('\n'.join([field + ': ' + str(profile[field]) for field in verbose_fields]))
+
+    pullf_parser = argparse.ArgumentParser()
+    @cmd2.with_argparser(utils.argparser_course_optional(pullf_parser))
+    @utils.argparser_course_optional_wrapper
+    def do_pullf(self, opts):
+        if opts.course is None:
+            self.poutput('No course specified.')
+            return False
+
+        unique_course_code = utils.unique_course_code(opts.course)
+        files_directory = join(*[os.path.expanduser('~'), 'canvas', 'courses', unique_course_code, 'files'])
+
+        self.filesync.pull_all_files(files_directory, opts.course)
 
 
 rc_file = join(os.path.expanduser('~'), '.clanvasrc')

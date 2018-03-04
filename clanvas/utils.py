@@ -1,5 +1,7 @@
+import datetime
 import functools
 
+import pytz
 from tabulate import tabulate
 from tzlocal import get_localzone
 
@@ -18,7 +20,7 @@ def cached_invalidatable(f):
 
 
 def argparser_course_optional(argparser):
-    argparser.add_argument('-c', '--course', help='course id or matching course string (e.g. the course code)')
+    argparser.add_argument('course', nargs='?', default=None, help='course id or matching course string (e.g. the course code)')
     return argparser
 
 
@@ -69,6 +71,10 @@ def filter_courses(courses, query):
 def tabulate_dict(item_to_list, items):
     return dict(zip(items, tabulate(map(item_to_list, items), tablefmt='plain').split('\n')))
 
+epoch = datetime.datetime.utcfromtimestamp(0).replace(tzinfo=pytz.utc)
+
+def unix_time_seconds(dt):
+    return (dt - epoch).total_seconds()
 
 def get_course_by_query(clanvas, query, fail_on_ambiguous=False, quiet=False):
     matched_courses = list(filter_courses(clanvas.get_courses(), query))
