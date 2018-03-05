@@ -1,8 +1,9 @@
 import argparse
 import functools
 import os
+import webbrowser
 from os.path import isfile, join
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 import cmd2
 import colorama
@@ -149,6 +150,32 @@ class Clanvas(cmd2.Cmd):
     @utils.argparser_course_optional_wrapper
     def do_lan(self, opts):
         return self.lister.list_announcements(**vars(opts))
+
+    wopen_parser = argparse.ArgumentParser(description='Open in canvas web interface.')
+    wopen_parser = utils.argparser_course_optional(wopen_parser)
+    wopen_parser.add_argument('-i', '--item', default=None, help='course item to open')
+
+    @cmd2.with_argparser(wopen_parser)
+    @utils.argparser_course_optional_wrapper
+    def do_wopen(self, opts):
+        if opts.course is None:
+            url = self.host
+        else:
+            url = urljoin(self.url, f'courses/{opts.course.id}')
+
+        if opts.item is not None and opts.course is not None:
+            replace_map = {
+                'home': '',
+                'syllabus': 'assignments/syllabus',
+                'people': 'users',
+                'discussions': 'discussion_topics'
+            }
+            item_value = opts.item
+            for item, replacement in replace_map.items():
+                item_value = item_value.replace(item, replacement)
+            url = urljoin(url + '/', item_value)
+
+        webbrowser.open(url, new=2)
 
     login_parser = argparse.ArgumentParser(description='Set URL and token to use for all Canvas API calls')
     login_parser.add_argument('url', help='URL of Canvas server')
