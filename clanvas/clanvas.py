@@ -13,6 +13,7 @@ from colorama import Fore, Style
 import filesynchronizer
 import lister
 import utils
+from filters import latest_term_courses
 from outputter import Verbosity
 from utils import cached_invalidatable
 
@@ -125,12 +126,19 @@ class Clanvas(cmd2.Cmd):
 
     lg_parser = argparse.ArgumentParser(description='List course grades.')
     lg_parser.add_argument('-l', '--long', action='store_true', help='long listing')
+    lg_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms) if no course specified')
     lg_parser = utils.argparser_course_optional(lg_parser)
 
     @cmd2.with_argparser(lg_parser)
     @utils.argparser_course_optional_wrapper
     def do_lg(self, opts):
-        return self.lister.list_grades(**vars(opts))
+        opts_copy = dict(vars(opts))
+        del opts_copy['all']
+        if opts.course is None:
+            del opts_copy['course']
+            return self.lister.list_all_grades(self.get_courses() if opts.all else latest_term_courses(self.get_courses()), **opts_copy)
+        else:
+            return self.lister.list_grades(**opts_copy)
 
     lan_parser = argparse.ArgumentParser(description='List course announcements.')
     lan_parser.add_argument('-n', '--number', nargs=1, type=int, default=5, help='long listing')

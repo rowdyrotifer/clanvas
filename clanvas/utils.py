@@ -57,10 +57,6 @@ def unique_course_code(course):
     return course.course_code.replace(' ', '') + '-' + str(course.id)
 
 
-def course_info_items(c):
-    return [c.course_code, c.id, c.term['name'] if hasattr(c, 'term') else '', c.name]
-
-
 def assignment_info_items(a):
     return [a.id, a.due_at_date.astimezone(get_localzone()).strftime("%a, %d %b %I:%M%p") if hasattr(a, 'due_at_date') else '', a.name]
 
