@@ -8,14 +8,16 @@ class Verbosity(Enum):
     VERBOSE = 2
     DEBUG = 3
 
-
 class Outputter(ABC):
     def __init__(self, printfn, verbosityfn):
         self.printfn = printfn
         self.verbosityfn = verbosityfn
 
+    def check(self, verbosity):
+        return self.verbosityfn().value >= verbosity.value
+
     def poutput(self, msg, end='\n', verbosity=Verbosity.NORMAL):
-        if self.verbosityfn().value >= verbosity.value:
+        if self.check(verbosity):
             self.printfn(msg + end)
 
     def poutput_normal(self, msg, end='\n'):

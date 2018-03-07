@@ -1,5 +1,6 @@
 import datetime
 import functools
+import json
 from collections import defaultdict
 
 import pytz
@@ -9,14 +10,20 @@ from tzlocal import get_localzone
 
 
 def cached_invalidatable(f):
-    cached_value = None
+    cached_values = {}
 
     @functools.wraps(f)
     def check_recalculate(self, **kwargs):
-        nonlocal cached_value
-        if kwargs.get('invalidate', False) or cached_value is None:
-            cached_value = f(self, **kwargs)
-        return cached_value
+        nonlocal cached_values
+
+        kwargs_shallow_copy = {**kwargs}
+        kwargs_shallow_copy.pop('invalidate', None)
+        kwargs_set = frozenset(kwargs_shallow_copy)
+
+        if kwargs.get('invalidate', False) or kwargs_set not in cached_values:
+            cached_values[kwargs_set] = f(self, **kwargs)
+
+        return cached_values[kwargs_set]
 
     return check_recalculate
 

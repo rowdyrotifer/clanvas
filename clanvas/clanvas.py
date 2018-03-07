@@ -50,6 +50,14 @@ class Clanvas(cmd2.Cmd):
     def current_user_profile(self, **kwargs):
         return self.canvas.get_current_user().get_profile()
 
+    # @cached_invalidatable
+    # def assignment_groups(self, **kwargs):
+    #     course: Course = next((course for course in self.get_courses() if course.id == kwargs['courseid']), None)
+    #     if course is None:
+    #         raise ValueError('Tried to get assignment groups of course that does not exist.')
+    #     else:
+    #         return course.list_assignment_groups()
+
     verbosity = 'NORMAL'
 
     def get_verbosity(self) -> Verbosity:
@@ -127,6 +135,8 @@ class Clanvas(cmd2.Cmd):
 
     lg_parser = argparse.ArgumentParser(description='List course grades.')
     lg_parser.add_argument('-l', '--long', action='store_true', help='long listing')
+    lg_parser.add_argument('-g', '--groups', action='store_true', help='include assignment groups')
+    lg_parser.add_argument('-u', '--ungraded', action='store_true', help='include ungraded assignments')
     lg_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms) if no course specified')
     lg_parser = utils.argparser_course_optional(lg_parser)
 
