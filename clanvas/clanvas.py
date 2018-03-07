@@ -7,6 +7,7 @@ from urllib.parse import urlparse, urljoin
 
 import cmd2
 import colorama
+import readline
 from canvasapi import Canvas
 from canvasapi.course import Course
 from colorama import Fore, Style
@@ -268,6 +269,12 @@ for command in completion_map_dir_file:
     setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.Cmd.path_complete, dir_only=False))
 
 if __name__ == '__main__':
+    if 'libedit' in readline.__doc__:
+        readline.parse_and_bind("bind -e")
+        readline.parse_and_bind("bind '\t' rl_complete")
+    else:
+        readline.parse_and_bind("tab: complete")
+
     colorama.init()  # Windows color support
 
     cmd = Clanvas()
