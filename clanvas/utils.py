@@ -3,6 +3,7 @@ import functools
 from collections import defaultdict
 
 import pytz
+from canvasapi.course import Course
 from tabulate import tabulate
 from tzlocal import get_localzone
 
@@ -122,8 +123,8 @@ def get_course_by_query(clanvas, query, fail_on_ambiguous=False, quiet=False):
     return None
 
 
-def get_submissions_by_assignment(course, display_assignments):
-    assignment_ids = map(lambda assignment: assignment.id, display_assignments)
+def get_submissions_for_assignments(course: Course, assignments):
+    assignment_ids = [assignment.id for assignment in assignments]
     assignment_submissions = course.list_multiple_submissions(assignment_ids=assignment_ids)
 
     submissions_by_assignment = defaultdict(list)

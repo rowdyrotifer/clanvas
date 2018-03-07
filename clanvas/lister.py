@@ -62,16 +62,10 @@ class Lister(Outputter):
 
             assignments = course.get_assignments()
 
-            submissions_by_assignment = utils.get_submissions_by_assignment(course, assignments)
+            submissions_by_assignment = utils.get_submissions_for_assignments(course, assignments)
 
             row_function = functools.partial(Lister.tabulate_grade_row, long=long, submissions_by_assignment=submissions_by_assignment)
             rows = tabulate(map(row_function, assignments), tablefmt='plain').split('\n')
-
-            # first = False
-            # from tree_format import format_tree
-            # for row in rows[:-1]:
-            #     if first:
-            #         self.poutput('└── ')
 
             tree = (course_info, [(row, []) for row in rows])
 
@@ -79,9 +73,7 @@ class Lister(Outputter):
 
 
     @staticmethod
-    def tabulate_grade_row(assignment, long, submissions_by_assignment):
-        submission = next(submission for submission in submissions_by_assignment[assignment.id]
-                          if hasattr(submission, 'score') and submission.score is not None)
+    def tabulate_grade_row(assignment, submission, long):
         score = submission.score
         possible = assignment.points_possible
         fraction = f'{rstrip_zeroes(score)}/{rstrip_zeroes(possible)}'
@@ -99,11 +91,21 @@ class Lister(Outputter):
             return False
 
         assignments = course.get_assignments()
+        submissions_by_assignment = utils.get_submissions_for_assignments(course, assignments)
 
-        submissions_by_assignment = utils.get_submissions_by_assignment(course, assignments)
+        def graded_submission(assignment):
+            if assignment.id in submissions_by_assignment:
+                submissions = submissions_by_assignment[assignment.id]
+                submission = next((s for s in submissions if hasattr(s, 'grade') and s.grade is not None), None)
+                if submission is not None:
+                    return submission
+            return None
 
-        row_function = functools.partial(Lister.tabulate_grade_row, long=long, submissions_by_assignment=submissions_by_assignment)
-        self.poutput(tabulate(map(row_function, assignments), tablefmt='plain'))
+        graded_assignment_submissions = {assignment:graded_submission(assignment) for assignment in assignments}
+
+        table = [Lister.tabulate_grade_row(long=long, assignment=assignment, submission=submission)
+                 for assignment, submission in graded_assignment_submissions.items() if submission is not None]
+        self.poutput(tabulate(table, tablefmt='plain'))
 
         return False
 
