@@ -1,6 +1,5 @@
 import datetime
 import functools
-import json
 from collections import defaultdict
 
 import pytz
@@ -72,13 +71,9 @@ def assignment_info_items(a):
 def submission_info_items(s):
     return [s.id, s.score if hasattr(s, 'score') else '']
 
-
-def course_query_items(c):
-    return [c.course_code, c.id, unique_course_code(c), c.name]
-
-
 def filter_courses(courses, query):
-    return filter(lambda course: any([query in str(item) for item in course_query_items(course)]), courses)
+    query_processed = query.replace(' ', '').lower()
+    return filter(lambda course: query_processed in unique_course_code(course).replace(' ', '').lower(), courses)
 
 
 def tabulate_dict(item_to_list, items):

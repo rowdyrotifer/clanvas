@@ -19,7 +19,7 @@ T = TypeVar('T')
 class FileTree(Generic[T]):
     def __init__(self, path: str, folders: 'Sequence[FileTree[T]]', files: Sequence[T]):
         self.path = path
-        self.folders: Sequence[FileTree[T]] = folders
+        self.folders: 'Sequence[FileTree[T]]' = folders
         self.files: Sequence[T] = files
 
 

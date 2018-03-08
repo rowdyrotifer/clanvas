@@ -1,8 +1,6 @@
 from collections import defaultdict, Sequence
 from operator import itemgetter
 
-import functools
-
 from canvasapi.assignment import Assignment, AssignmentGroup
 from canvasapi.course import Course
 from canvasapi.exceptions import Unauthorized, CanvasException

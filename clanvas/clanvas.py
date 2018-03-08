@@ -216,8 +216,6 @@ class Clanvas(cmd2.Cmd):
             self.current_course = None
             return False
 
-        courses = self.get_courses()
-
         match = utils.get_course_by_query(self, opts.course)
         if match is not None:
             self.current_course = match
