@@ -1,23 +1,20 @@
 import argparse
-import functools
 import os
+import readline
 import webbrowser
-from os.path import isfile, join
+from os.path import isfile, join, expanduser
 from urllib.parse import urlparse, urljoin
 
 import cmd2
 import colorama
-import readline
 from canvasapi import Canvas
-from canvasapi.course import Course
 from colorama import Fore, Style
 
-import filesynchronizer
-import lister
-import utils
-from filters import latest_term_courses
-from outputter import Verbosity
-from utils import cached_invalidatable
+from .filesynchronizer import FileSynchronizer
+from .filters import latest_term_courses
+from .lister import Lister
+from .outputter import Verbosity
+from .utils import *
 
 
 class Clanvas(cmd2.Cmd):
@@ -39,8 +36,8 @@ class Clanvas(cmd2.Cmd):
         self.current_directory = self.home
 
         general_output_fn = functools.partial(self.poutput, end='')
-        self.file_synchronizer = filesynchronizer.FileSynchronizer(general_output_fn, self.get_verbosity)
-        self.lister = lister.Lister(general_output_fn, self.get_verbosity)
+        self.file_synchronizer = FileSynchronizer(general_output_fn, self.get_verbosity)
+        self.lister = Lister(general_output_fn, self.get_verbosity)
 
     @cached_invalidatable
     def get_courses(self, **kwargs):
@@ -50,14 +47,6 @@ class Clanvas(cmd2.Cmd):
     @cached_invalidatable
     def current_user_profile(self, **kwargs):
         return self.canvas.get_current_user().get_profile()
-
-    # @cached_invalidatable
-    # def assignment_groups(self, **kwargs):
-    #     course: Course = next((course for course in self.get_courses() if course.id == kwargs['courseid']), None)
-    #     if course is None:
-    #         raise ValueError('Tried to get assignment groups of course that does not exist.')
-    #     else:
-    #         return course.list_assignment_groups()
 
     verbosity = 'NORMAL'
 
@@ -92,7 +81,7 @@ class Clanvas(cmd2.Cmd):
 
     cd_parser = argparse.ArgumentParser(description='Change the working directory.')
     cd_parser.add_argument('directory', nargs='?', default='',
-                           help='absolute or relative pathname of the directory that shall become the new working directory')
+                           help='absolute or relative pathname of directory to become the new working directory')
 
     @cmd2.with_argparser(cd_parser)
     def do_cd(self, opts):
@@ -127,10 +116,10 @@ class Clanvas(cmd2.Cmd):
     la_parser.add_argument('-l', '--long', action='store_true', help='long listing')
     la_parser.add_argument('-s', '--submissions', action='store_true', help='show submissions')
     la_parser.add_argument('-u', '--upcoming', action='store_true', help='show only upcoming assignments')
-    la_parser = utils.argparser_course_optional(la_parser)
+    la_parser = argparser_course_optional(la_parser)
 
     @cmd2.with_argparser(la_parser)
-    @utils.argparser_course_optional_wrapper
+    @argparser_course_optional_wrapper
     def do_la(self, opts):
         return self.lister.list_assignments(**vars(opts))
 
@@ -139,10 +128,10 @@ class Clanvas(cmd2.Cmd):
     lg_parser.add_argument('-g', '--groups', action='store_true', help='include assignment groups')
     lg_parser.add_argument('-u', '--ungraded', action='store_true', help='include ungraded assignments')
     lg_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms) if no course specified')
-    lg_parser = utils.argparser_course_optional(lg_parser)
+    lg_parser = argparser_course_optional(lg_parser)
 
     @cmd2.with_argparser(lg_parser)
-    @utils.argparser_course_optional_wrapper
+    @argparser_course_optional_wrapper
     def do_lg(self, opts):
         opts_copy = dict(vars(opts))
         del opts_copy['all']
@@ -155,19 +144,19 @@ class Clanvas(cmd2.Cmd):
     lan_parser = argparse.ArgumentParser(description='List course announcements.')
     lan_parser.add_argument('-n', '--number', nargs=1, type=int, default=5, help='long listing')
     lan_parser.add_argument('-t', '--time', nargs=1, type=int, default=None, help='long listing')
-    lan_parser = utils.argparser_course_optional(lan_parser)
+    lan_parser = argparser_course_optional(lan_parser)
 
     @cmd2.with_argparser(lan_parser)
-    @utils.argparser_course_optional_wrapper
+    @argparser_course_optional_wrapper
     def do_lan(self, opts):
         return self.lister.list_announcements(**vars(opts))
 
     wopen_parser = argparse.ArgumentParser(description='Open in canvas web interface.')
-    wopen_parser = utils.argparser_course_optional(wopen_parser)
+    wopen_parser = argparser_course_optional(wopen_parser)
     wopen_parser.add_argument('-i', '--item', default=None, help='course item to open')
 
     @cmd2.with_argparser(wopen_parser)
-    @utils.argparser_course_optional_wrapper
+    @argparser_course_optional_wrapper
     def do_wopen(self, opts):
         if opts.course is None:
             url = self.host
@@ -216,7 +205,7 @@ class Clanvas(cmd2.Cmd):
             self.current_course = None
             return False
 
-        match = utils.get_course_by_query(self, opts.course)
+        match = get_course_by_query(self, opts.course)
         if match is not None:
             self.current_course = match
 
@@ -224,7 +213,7 @@ class Clanvas(cmd2.Cmd):
         query = line[3:].replace(' ', '').lower()
         courses = self.get_courses()
 
-        return [utils.unique_course_code(course) for course in utils.filter_courses(courses, query)]
+        return [unique_course_code(course) for course in filter_courses(courses, query)]
 
     whoami_parser = argparse.ArgumentParser()
     whoami_parser.add_argument('-v', '--verbose', action='store_true',
@@ -242,15 +231,15 @@ class Clanvas(cmd2.Cmd):
 
     pullf_parser = argparse.ArgumentParser(description='Pull course files to local disk.')
 
-    @cmd2.with_argparser(utils.argparser_course_optional(pullf_parser))
-    @utils.argparser_course_optional_wrapper
+    @cmd2.with_argparser(argparser_course_optional(pullf_parser))
+    @argparser_course_optional_wrapper
     def do_pullf(self, opts):
         if opts.course is None:
             self.poutput('No course specified.')
             return False
 
-        unique_course_code = utils.unique_course_code(opts.course)
-        files_directory = join(*[os.path.expanduser('~'), 'canvas', 'courses', unique_course_code, 'files'])
+        code = unique_course_code(opts.course)
+        files_directory = join(*[os.path.expanduser('~'), 'canvas', 'courses', code, 'files'])
 
         self.file_synchronizer.pull_all_files(files_directory, opts.course)
 
@@ -266,7 +255,8 @@ for command in completion_map_dir_only:
 for command in completion_map_dir_file:
     setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.Cmd.path_complete, dir_only=False))
 
-if __name__ == '__main__':
+
+def main():
     if 'libedit' in readline.__doc__:
         readline.parse_and_bind("bind -e")
         readline.parse_and_bind("bind '\t' rl_complete")
@@ -277,8 +267,12 @@ if __name__ == '__main__':
 
     cmd = Clanvas()
 
-    rc_file = join(os.path.expanduser('~'), '.clanvasrc')
+    rc_file = join(expanduser('~'), '.clanvasrc')
     if isfile(rc_file):
         cmd.onecmd('load ' + rc_file)
 
     cmd.cmdloop()
+
+
+if __name__ == "__main__":
+    main()

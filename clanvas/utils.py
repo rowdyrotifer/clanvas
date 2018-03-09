@@ -28,7 +28,7 @@ def cached_invalidatable(f):
 
 
 def argparser_course_optional(argparser):
-    argparser.add_argument('course', nargs='?', default=None, help='course id or matching course string (e.g. the course code)')
+    argparser.add_argument('-c', '--course', default=None, help='course id or matching course code substring')
     return argparser
 
 

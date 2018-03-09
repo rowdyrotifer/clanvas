@@ -1,17 +1,14 @@
+import os
 import pathlib
+from os.path import join
 from typing import TypeVar, Generic, Sequence
 
-import os
-
-import pytz
-from canvasapi.course import Course
 from canvasapi.exceptions import Unauthorized
 from canvasapi.file import File
 from canvasapi.folder import Folder
-from os.path import join
 
-import utils
-from outputter import Outputter
+from .outputter import Outputter
+from .utils import *
 
 T = TypeVar('T')
 
@@ -40,7 +37,7 @@ class FileSynchronizer(Outputter):
         for file in tree.files:
             filepath = join(join(directory, tree.path), file.filename)
 
-            canvas_mtime = utils.unix_time_seconds(file.modified_at_date.replace(tzinfo=pytz.utc))
+            canvas_mtime = unix_time_seconds(file.modified_at_date.replace(tzinfo=pytz.utc))
 
             if not os.path.exists(filepath) or canvas_mtime > os.stat(filepath).st_mtime:
                 file.download(filepath)

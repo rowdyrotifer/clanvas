@@ -1,17 +1,15 @@
-from collections import defaultdict, Sequence
+from collections import Sequence
 from operator import itemgetter
 
 from canvasapi.assignment import Assignment, AssignmentGroup
-from canvasapi.course import Course
 from canvasapi.exceptions import Unauthorized, CanvasException
 from canvasapi.submission import Submission
-from tabulate import tabulate
 from tree_format import format_tree
 
-import utils
-from filters import latest_term_courses, future_assignments
-from outputter import Outputter
-from utils import rstrip_zeroes
+from .filters import latest_term_courses, future_assignments
+from .outputter import Outputter
+from .utils import *
+from .utils import rstrip_zeroes
 
 
 class Lister(Outputter):
@@ -25,7 +23,7 @@ class Lister(Outputter):
         if long:
             self.poutput(tabulate(map(Lister.course_info_items, display_courses), tablefmt='plain'))
         else:
-            self.poutput('\n'.join([utils.unique_course_code(c) for c in display_courses]))
+            self.poutput('\n'.join([unique_course_code(c) for c in display_courses]))
 
     def list_assignments(self, course: Course, long=False, submissions=False, upcoming=False):
         if course is None:
@@ -44,17 +42,17 @@ class Lister(Outputter):
 
                 submissions_by_assignment = defaultdict(list)
 
-                tabulated_submissions = utils.tabulate_dict(utils.submission_info_items, assignment_submissions)
+                tabulated_submissions = tabulate_dict(submission_info_items, assignment_submissions)
                 for submission, formatted in tabulated_submissions.items():
                     submissions_by_assignment[submission.assignment_id].append((formatted, []))
 
-                tabulated_assignments = utils.tabulate_dict(utils.assignment_info_items, assignments)
+                tabulated_assignments = tabulate_dict(assignment_info_items, assignments)
 
-                tree = (utils.unique_course_code(course), [(formatted, submissions_by_assignment[assignment.id]) for assignment, formatted in tabulated_assignments.items()])
+                tree = (unique_course_code(course), [(formatted, submissions_by_assignment[assignment.id]) for assignment, formatted in tabulated_assignments.items()])
 
                 self.poutput(format_tree(tree, format_node=itemgetter(0), get_children=itemgetter(1)))
             else:
-                self.poutput(tabulate(map(utils.assignment_info_items, assignments), tablefmt='plain'))
+                self.poutput(tabulate(map(assignment_info_items, assignments), tablefmt='plain'))
         else:
             self.poutput('\n'.join([assignment.name for assignment in assignments]))
 
@@ -65,7 +63,7 @@ class Lister(Outputter):
             #
             # assignments = course.get_assignments()
             #
-            # submissions_by_assignment = utils.get_submissions_for_assignments(course, assignments)
+            # submissions_by_assignment = get_submissions_for_assignments(course, assignments)
             #
             # row_function = functools.partial(Lister.tabulate_grade_row, long=long, submissions_by_assignment=submissions_by_assignment)
             # rows = tabulate(map(row_function, assignments), tablefmt='plain').split('\n')
@@ -86,7 +84,7 @@ class Lister(Outputter):
             percentage = ''
 
         if long:
-            datetimestr = utils.compact_datetime(submission.submitted_at_date) if hasattr(submission,
+            datetimestr = compact_datetime(submission.submitted_at_date) if hasattr(submission,
                                                                                           'submitted_at_date') else ''
             return [submission.id, datetimestr, assignment.name, fraction, percentage]
         else:
@@ -95,7 +93,7 @@ class Lister(Outputter):
     @staticmethod
     def grades_tree(course: Course, groups=False, include_ungraded=False):
         assignment_submission_pair = course.get_assignments()
-        submissions_by_assignment = utils.get_submissions_for_assignments(course, assignment_submission_pair)
+        submissions_by_assignment = get_submissions_for_assignments(course, assignment_submission_pair)
 
         def graded_submission(assignment):
             if assignment.id in submissions_by_assignment:
