@@ -251,9 +251,9 @@ completion_map_dir_only = ['cd']
 completion_map_dir_file = ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 'tail', 'ls']
 
 for command in completion_map_dir_only:
-    setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.Cmd.path_complete, dir_only=True))
+    setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.path_complete, dir_only=True))
 for command in completion_map_dir_file:
-    setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.Cmd.path_complete, dir_only=False))
+    setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.path_complete, dir_only=False))
 
 
 def main():
