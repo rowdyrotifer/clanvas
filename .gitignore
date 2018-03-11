@@ -1,3 +1,5 @@
 .idea/
 *.pyc
 *.pyo
+# rst is generated for PyPi with pandoc --from=markdown --to=rst --output=README.rst README.md
+README.rst
