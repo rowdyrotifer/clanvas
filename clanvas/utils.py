@@ -27,31 +27,6 @@ def cached_invalidatable(f):
     return check_recalculate
 
 
-def argparser_course_optional(argparser):
-    argparser.add_argument('-c', '--course', default=None, help='course id or matching course code substring')
-    return argparser
-
-
-def argparser_course_optional_wrapper(with_argparser):
-    """
-    When applied to a do_x function in the Clanvas class that takes in argparser opts,
-    will convert/replace course attribute with a corresponding course object either
-    using the course string as a query or the current (cc'd) course if not supplied.
-    :param with_argparser: the cmd2.with_argparser method to be wrapped.
-    :return:
-    """
-    @functools.wraps(with_argparser)
-    def inject_argparser(self, opts):
-        if opts.course is not None:
-            opts.course = get_course_by_query(self, opts.course)
-        elif self.current_course is not None:
-            opts.course = self.current_course
-
-        with_argparser(self, opts)
-
-    return inject_argparser
-
-
 def rstrip_zeroes(float):
     return ('%f' % float).rstrip('0').rstrip('.')
 

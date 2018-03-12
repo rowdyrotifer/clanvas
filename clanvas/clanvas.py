@@ -1,5 +1,6 @@
-import argparse
 import os
+from functools import lru_cache
+
 import readline
 import webbrowser
 from os.path import isfile, join, expanduser
@@ -10,6 +11,8 @@ import colorama
 from canvasapi import Canvas
 from colorama import Fore, Style
 
+from .completers import Completers
+from .interfaces import *
 from .filesynchronizer import FileSynchronizer
 from .filters import latest_term_courses
 from .lister import Lister
@@ -38,6 +41,9 @@ class Clanvas(cmd2.Cmd):
         general_output_fn = functools.partial(self.poutput, end='')
         self.file_synchronizer = FileSynchronizer(general_output_fn, self.get_verbosity)
         self.lister = Lister(general_output_fn, self.get_verbosity)
+        self.completers = Completers(self)
+        self.complete_cc = self.completers.course_completer
+        self.complete_wopen = self.completers.wopen_completer
 
     @cached_invalidatable
     def get_courses(self, **kwargs):
@@ -48,15 +54,16 @@ class Clanvas(cmd2.Cmd):
     def current_user_profile(self, **kwargs):
         return self.canvas.get_current_user().get_profile()
 
-    verbosity = 'NORMAL'
-
     def get_verbosity(self) -> Verbosity:
         return Verbosity[self.verbosity]
 
-    # cmd2 attribute, made dynamic with get_prompt()
-    prompt = property(lambda self: self.get_prompt())
-
     prompt_string = Fore.LIGHTGREEN_EX + '{login_id}@{host}' + Style.RESET_ALL + ':' + Fore.YELLOW + '{pwc}' + Style.RESET_ALL + ':' + Fore.BLUE + '{pwd} ' + Style.RESET_ALL + '$ '
+
+    verbosity = 'NORMAL'
+
+    canvas_path = expanduser('~/canvas')
+
+
 
     def get_prompt(self):
         if self.canvas is None:
@@ -69,6 +76,10 @@ class Clanvas(cmd2.Cmd):
             pwd=os.getcwd().replace(self.home, '~')
         )
 
+
+    # cmd2 attribute
+    prompt = property(lambda self: self.get_prompt())
+
     #     _____                                          _
     #    / ____|                                        | |
     #   | |     ___  _ __ ___  _ __ ___   __ _ _ __   __| |___
@@ -78,10 +89,6 @@ class Clanvas(cmd2.Cmd):
     #
 
     # Reimplement POSIX cd to call os.chdir
-
-    cd_parser = argparse.ArgumentParser(description='Change the working directory.')
-    cd_parser.add_argument('directory', nargs='?', default='',
-                           help='absolute or relative pathname of directory to become the new working directory')
 
     @cmd2.with_argparser(cd_parser)
     def do_cd(self, opts):
@@ -100,10 +107,15 @@ class Clanvas(cmd2.Cmd):
             except Exception as ex:
                 self.poutput('{}'.format(ex))
 
-    lc_parser = argparse.ArgumentParser(description='List courses.')
-    lc_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms)')
-    lc_parser.add_argument('-l', '--long', action='store_true', help='long listing')
-    lc_parser.add_argument('-i', '--invalidate', action='store_true', help='invalidate cached course info')
+    @cmd2.with_argparser(cc_parser)
+    def do_cc(self, opts):
+        if opts.course is '' or opts.course is '~':
+            self.current_course = None
+            return False
+
+        match = get_course_by_query(self, opts.course)
+        if match is not None:
+            self.current_course = match
 
     @cmd2.with_argparser(lc_parser)
     def do_lc(self, opts):
@@ -112,23 +124,10 @@ class Clanvas(cmd2.Cmd):
         del kwargs['invalidate']
         self.lister.list_courses(courses, **kwargs)
 
-    la_parser = argparse.ArgumentParser(description='List course assignments.')
-    la_parser.add_argument('-l', '--long', action='store_true', help='long listing')
-    la_parser.add_argument('-s', '--submissions', action='store_true', help='show submissions')
-    la_parser.add_argument('-u', '--upcoming', action='store_true', help='show only upcoming assignments')
-    la_parser = argparser_course_optional(la_parser)
-
     @cmd2.with_argparser(la_parser)
     @argparser_course_optional_wrapper
     def do_la(self, opts):
         return self.lister.list_assignments(**vars(opts))
-
-    lg_parser = argparse.ArgumentParser(description='List course grades.')
-    lg_parser.add_argument('-l', '--long', action='store_true', help='long listing')
-    lg_parser.add_argument('-g', '--groups', action='store_true', help='include assignment groups')
-    lg_parser.add_argument('-u', '--ungraded', action='store_true', help='include ungraded assignments')
-    lg_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms) if no course specified')
-    lg_parser = argparser_course_optional(lg_parser)
 
     @cmd2.with_argparser(lg_parser)
     @argparser_course_optional_wrapper
@@ -141,45 +140,32 @@ class Clanvas(cmd2.Cmd):
         else:
             return self.lister.list_grades(**opts_copy)
 
-    lan_parser = argparse.ArgumentParser(description='List course announcements.')
-    lan_parser.add_argument('-n', '--number', nargs=1, type=int, default=5, help='long listing')
-    lan_parser.add_argument('-t', '--time', nargs=1, type=int, default=None, help='long listing')
-    lan_parser = argparser_course_optional(lan_parser)
-
     @cmd2.with_argparser(lan_parser)
     @argparser_course_optional_wrapper
     def do_lan(self, opts):
         return self.lister.list_announcements(**vars(opts))
 
-    wopen_parser = argparse.ArgumentParser(description='Open in canvas web interface.')
-    wopen_parser = argparser_course_optional(wopen_parser)
-    wopen_parser.add_argument('-i', '--item', default=None, help='course item to open')
+    @lru_cache(maxsize=None)
+    def list_tabs_cached(self, course_id):
+        course = next(filter(lambda c: c.id == course_id, self.get_courses()), None)
+        return sorted(course.list_tabs(), key=lambda tab: tab.position)
+
 
     @cmd2.with_argparser(wopen_parser)
     @argparser_course_optional_wrapper
     def do_wopen(self, opts):
-        if opts.course is None:
-            url = self.host
-        else:
-            url = urljoin(self.url, f'courses/{opts.course.id}')
+        if opts.tab is not None and opts.course is not None:
+            tabs = self.list_tabs_cached(opts.course.id)
 
-        if opts.item is not None and opts.course is not None:
-            replace_map = {
-                'home': '',
-                'syllabus': 'assignments/syllabus',
-                'people': 'users',
-                'discussions': 'discussion_topics'
-            }
-            item_value = opts.item
-            for item, replacement in replace_map.items():
-                item_value = item_value.replace(item, replacement)
-            url = urljoin(url + '/', item_value)
+            tab = next(filter(lambda tab: opts.tab.lower() in tab.label.lower(), tabs), None)
+            if tab is None:
+                self.poutput(f'No tab found matching {opts.tab}')
+                return False
 
-        webbrowser.open(url, new=2)
+            webbrowser.open(tab.full_url, new=2)
 
-    login_parser = argparse.ArgumentParser(description='Set URL and token to use for all Canvas API calls')
-    login_parser.add_argument('url', help='URL of Canvas server')
-    login_parser.add_argument('token', help='Canvas API access token')
+
+        return False
 
     @cmd2.with_argparser(login_parser)
     def do_login(self, opts):
@@ -195,29 +181,6 @@ class Clanvas(cmd2.Cmd):
         profile = self.current_user_profile()
         self.poutput('Logged in as {:s} ({:s})'.format(profile['name'], profile['login_id']))
 
-    cc_parser = argparse.ArgumentParser()
-    cc_parser.add_argument('course', nargs='?', default='',
-                           help='course id or matching course string (e.g. the course code)')
-
-    @cmd2.with_argparser(cc_parser)
-    def do_cc(self, opts):
-        if opts.course is '' or opts.course is '~':
-            self.current_course = None
-            return False
-
-        match = get_course_by_query(self, opts.course)
-        if match is not None:
-            self.current_course = match
-
-    def complete_cc(self, text, line, begidx, endidx):
-        query = line[3:].replace(' ', '').lower()
-        courses = self.get_courses()
-
-        return [unique_course_code(course) for course in filter_courses(courses, query)]
-
-    whoami_parser = argparse.ArgumentParser()
-    whoami_parser.add_argument('-v', '--verbose', action='store_true',
-                               help='display more info about the logged in user')
 
     @cmd2.with_argparser(whoami_parser)
     def do_whoami(self, opts):
@@ -229,9 +192,7 @@ class Clanvas(cmd2.Cmd):
             verbose_fields = ['name', 'short_name', 'login_id', 'primary_email', 'id', 'time_zone']
             self.poutput('\n'.join([field + ': ' + str(profile[field]) for field in verbose_fields]))
 
-    pullf_parser = argparse.ArgumentParser(description='Pull course files to local disk.')
-
-    @cmd2.with_argparser(argparser_course_optional(pullf_parser))
+    @cmd2.with_argparser(pullf_parser)
     @argparser_course_optional_wrapper
     def do_pullf(self, opts):
         if opts.course is None:
@@ -246,6 +207,7 @@ class Clanvas(cmd2.Cmd):
 
 # For specifying tab-completion for default shell commands
 # TODO: add basically everything from GNU Coreutils http://www.gnu.org/software/coreutils/manual/html_node/index.html
+# Better TODO: make shell completion default to
 
 completion_map_dir_only = ['cd']
 completion_map_dir_file = ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 'tail', 'ls']
