@@ -34,6 +34,7 @@ def argparser_course_optional_wrapper(with_argparser):
 
     return inject_argparser
 
+DEFAULT = '__DEFAULT__'
 
 cc_parser = argparse.ArgumentParser()
 cc_parser.add_argument('course', nargs='?', default='',
@@ -74,6 +75,7 @@ login_parser.add_argument('-q', '--quiet', action='store_true', help='suppress l
 
 pullf_parser = argparse.ArgumentParser(description='Pull course files to local disk.')
 pullf_parser = course_optional(pullf_parser)
+pullf_parser.add_argument('-o', '--output', help='location to save course files')
 
 whoami_parser = argparse.ArgumentParser()
 whoami_parser.add_argument('-v', '--verbose', action='store_true',

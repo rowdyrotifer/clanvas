@@ -43,6 +43,7 @@ class Clanvas(cmd2.Cmd):
 
         self.complete_cc = self.completers.course_completer
         self.complete_wopen = self.completers.wopen_completer
+        self.complete_pullf = self.completers.pullf_completer
 
         self.complete_la = self.completers.generic_course_optional_completer
         self.complete_lg = self.completers.generic_course_optional_completer
@@ -204,9 +205,9 @@ class Clanvas(cmd2.Cmd):
             return False
 
         code = unique_course_code(opts.course)
-        files_directory = join(*[os.path.expanduser('~'), 'canvas', 'courses', code, 'files'])
+        destination_path = join(*[os.path.expanduser('~'), 'canvas', 'courses', code, 'files']) if opts.output is None else opts.output
 
-        self.file_synchronizer.pull_all_files(files_directory, opts.course)
+        self.file_synchronizer.pull_all_files(destination_path, opts.course)
 
 
 # For specifying tab-completion for default shell commands

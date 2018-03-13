@@ -3,6 +3,7 @@ import shlex
 from contextlib import redirect_stderr
 
 import cmd2
+import functools
 
 from .interfaces import wopen_parser, course_query_or_cc
 from .utils import unique_course_code, filter_courses
@@ -60,3 +61,7 @@ class Completers():
 
     def wopen_completer(self, text, line, begidx, endidx):
         return cmd2.flag_based_complete(text, line, begidx, endidx, flag_dict=self._course_complete_flags, default_completer=self.wopen_tab_completer)
+
+    def pullf_completer(self, text, line, begidx, endidx):
+        output_flags = dict.fromkeys(['-o', '--output'], functools.partial(cmd2.path_complete, dir_only=True))
+        return cmd2.flag_based_complete(text, line, begidx, endidx, flag_dict={**self._course_complete_flags, **output_flags})
