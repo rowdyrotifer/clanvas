@@ -1,21 +1,18 @@
 import os
-from functools import lru_cache
-from threading import Thread
-
-import readline
 import webbrowser
 from os.path import isfile, join, expanduser
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse
 
 import cmd2
 import colorama
+import readline
 from canvasapi import Canvas
 from colorama import Fore, Style
 
 from .completers import Completers
-from .interfaces import *
 from .filesynchronizer import FileSynchronizer
 from .filters import latest_term_courses
+from .interfaces import *
 from .lister import Lister
 from .outputter import Verbosity
 from .utils import *
@@ -43,13 +40,18 @@ class Clanvas(cmd2.Cmd):
         self.file_synchronizer = FileSynchronizer(general_output_fn, self.get_verbosity)
         self.lister = Lister(general_output_fn, self.get_verbosity)
         self.completers = Completers(self)
+
         self.complete_cc = self.completers.course_completer
         self.complete_wopen = self.completers.wopen_completer
 
+        self.complete_la = self.completers.generic_course_optional_completer
+        self.complete_lg = self.completers.generic_course_optional_completer
+        self.complete_lan = self.completers.generic_course_optional_completer
+
     @threadsafe_lru
     def get_courses(self, **kwargs):
-        return sorted(self.canvas.get_current_user().get_courses(include=['term', 'total_scores']),
-                      key=lambda course: (-course.enrollment_term_id, course.name))
+        return {course.id: course for course in sorted(self.canvas.get_current_user().get_courses(include=['term', 'total_scores']),
+                      key=lambda course: (-course.enrollment_term_id, course.name))}
 
     @threadsafe_lru
     def current_user_profile(self, **kwargs):
@@ -57,7 +59,7 @@ class Clanvas(cmd2.Cmd):
 
     @threadsafe_lru
     def list_tabs_cached(self, course_id):
-        course = next(filter(lambda c: c.id == course_id, self.get_courses()), None)
+        course = self.get_courses()[course_id]
         return sorted(course.list_tabs(), key=lambda tab: tab.position)
 
     def get_verbosity(self) -> Verbosity:
@@ -123,7 +125,7 @@ class Clanvas(cmd2.Cmd):
 
     @cmd2.with_argparser(lc_parser)
     def do_lc(self, opts):
-        courses = self.get_courses()
+        courses = self.get_courses().values()
         kwargs = dict(vars(opts))
         del kwargs['invalidate']
         self.lister.list_courses(courses, **kwargs)
@@ -140,7 +142,7 @@ class Clanvas(cmd2.Cmd):
         del opts_copy['all']
         if opts.course is None:
             del opts_copy['course']
-            return self.lister.list_all_grades(self.get_courses() if opts.all else latest_term_courses(self.get_courses()), **opts_copy)
+            return self.lister.list_all_grades(self.get_courses().values() if opts.all else latest_term_courses(self.get_courses().values()), **opts_copy)
         else:
             return self.lister.list_grades(**opts_copy)
 

@@ -61,7 +61,7 @@ def unix_time_seconds(dt):
     return (dt - epoch).total_seconds()
 
 def get_course_by_query(clanvas, query, fail_on_ambiguous=False, quiet=False):
-    matched_courses = list(filter_courses(clanvas.get_courses(), query))
+    matched_courses = list(filter_courses(clanvas.get_courses().values(), query))
     num_matches = len(matched_courses)
 
     if num_matches == 1:

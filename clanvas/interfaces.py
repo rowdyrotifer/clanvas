@@ -1,8 +1,7 @@
 import argparse
-
 import functools
 
-from .utils import get_course_by_query, unique_course_code, filter_courses
+from .utils import get_course_by_query
 
 
 def course_query_or_cc(clanvas, course, fail_on_ambiguous=False, quiet=False):
@@ -54,6 +53,7 @@ la_parser = course_optional(la_parser)
 la_parser.add_argument('-l', '--long', action='store_true', help='long listing')
 la_parser.add_argument('-s', '--submissions', action='store_true', help='show submissions')
 la_parser.add_argument('-u', '--upcoming', action='store_true', help='show only upcoming assignments')
+la_parser.add_argument('assignments', nargs='*', help='assignments to display associated information for')
 
 lan_parser = argparse.ArgumentParser(description='List course announcements.')
 lan_parser = course_optional(lan_parser)
