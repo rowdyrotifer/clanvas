@@ -179,10 +179,12 @@ class Clanvas(cmd2.Cmd):
 
         self.canvas = Canvas(opts.url, opts.token)
 
-        profile = self.current_user_profile()
-        self.poutput('Logged in as {:s} ({:s})'.format(profile['name'], profile['login_id']))
-
-        call_eagerly(self.get_courses, self.current_user_profile)
+        if not opts.quiet:
+            profile = self.current_user_profile()
+            self.poutput('Logged in as {:s} ({:s})'.format(profile['name'], profile['login_id']))
+            call_eagerly(self.get_courses)
+        else:
+            call_eagerly(self.get_courses, self.current_user_profile)
 
     @cmd2.with_argparser(whoami_parser)
     def do_whoami(self, opts):

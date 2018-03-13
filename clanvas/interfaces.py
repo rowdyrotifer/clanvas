@@ -70,6 +70,7 @@ lg_parser.add_argument('-a', '--all', action='store_true', help='all courses (pr
 login_parser = argparse.ArgumentParser(description='Set URL and token to use for all Canvas API calls')
 login_parser.add_argument('url', help='URL of Canvas server')
 login_parser.add_argument('token', help='Canvas API access token')
+login_parser.add_argument('-q', '--quiet', action='store_true', help='suppress login message')
 
 pullf_parser = argparse.ArgumentParser(description='Pull course files to local disk.')
 pullf_parser = course_optional(pullf_parser)
