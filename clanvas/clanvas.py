@@ -1,5 +1,6 @@
 import os
 from functools import lru_cache
+from threading import Thread
 
 import readline
 import webbrowser
@@ -45,14 +46,19 @@ class Clanvas(cmd2.Cmd):
         self.complete_cc = self.completers.course_completer
         self.complete_wopen = self.completers.wopen_completer
 
-    @cached_invalidatable
+    @threadsafe_lru
     def get_courses(self, **kwargs):
         return sorted(self.canvas.get_current_user().get_courses(include=['term', 'total_scores']),
                       key=lambda course: (-course.enrollment_term_id, course.name))
 
-    @cached_invalidatable
+    @threadsafe_lru
     def current_user_profile(self, **kwargs):
         return self.canvas.get_current_user().get_profile()
+
+    @threadsafe_lru
+    def list_tabs_cached(self, course_id):
+        course = next(filter(lambda c: c.id == course_id, self.get_courses()), None)
+        return sorted(course.list_tabs(), key=lambda tab: tab.position)
 
     def get_verbosity(self) -> Verbosity:
         return Verbosity[self.verbosity]
@@ -62,8 +68,6 @@ class Clanvas(cmd2.Cmd):
     verbosity = 'NORMAL'
 
     canvas_path = expanduser('~/canvas')
-
-
 
     def get_prompt(self):
         if self.canvas is None:
@@ -119,7 +123,7 @@ class Clanvas(cmd2.Cmd):
 
     @cmd2.with_argparser(lc_parser)
     def do_lc(self, opts):
-        courses = self.get_courses(invalidate=opts.invalidate)
+        courses = self.get_courses()
         kwargs = dict(vars(opts))
         del kwargs['invalidate']
         self.lister.list_courses(courses, **kwargs)
@@ -144,11 +148,6 @@ class Clanvas(cmd2.Cmd):
     @argparser_course_optional_wrapper
     def do_lan(self, opts):
         return self.lister.list_announcements(**vars(opts))
-
-    @lru_cache(maxsize=None)
-    def list_tabs_cached(self, course_id):
-        course = next(filter(lambda c: c.id == course_id, self.get_courses()), None)
-        return sorted(course.list_tabs(), key=lambda tab: tab.position)
 
 
     @cmd2.with_argparser(wopen_parser)
@@ -181,6 +180,7 @@ class Clanvas(cmd2.Cmd):
         profile = self.current_user_profile()
         self.poutput('Logged in as {:s} ({:s})'.format(profile['name'], profile['login_id']))
 
+        call_eagerly(self.get_courses, self.current_user_profile)
 
     @cmd2.with_argparser(whoami_parser)
     def do_whoami(self, opts):

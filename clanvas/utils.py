@@ -1,5 +1,6 @@
 import datetime
 import functools
+import threading
 from collections import defaultdict
 
 import pytz
@@ -99,6 +100,28 @@ def get_course_by_query(clanvas, query, fail_on_ambiguous=False, quiet=False):
 
     return None
 
+
+def call_eagerly(*args):
+    def runner(stop_event, callables):
+        while not stop_event.is_set() and callables:
+            callables.pop()()
+
+    event = threading.Event()
+    thread = threading.Thread(target=runner, args=(event, list(args)))
+    thread.start()
+    return event
+
+
+def threadsafe_lru(func):
+    func = functools.lru_cache(maxsize=None)(func)
+    lock_dict = defaultdict(threading.Lock)
+
+    def _thread_lru(*args, **kwargs):
+        key = functools._make_key(args, kwargs, typed=False)
+        with lock_dict[key]:
+            return func(*args, **kwargs)
+
+    return _thread_lru
 
 def get_submissions_for_assignments(course: Course, assignments):
     assignment_ids = [assignment.id for assignment in assignments]
