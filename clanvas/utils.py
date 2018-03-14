@@ -9,31 +9,12 @@ from tabulate import tabulate
 from tzlocal import get_localzone
 
 
-def cached_invalidatable(f):
-    cached_values = {}
-
-    @functools.wraps(f)
-    def check_recalculate(self, **kwargs):
-        nonlocal cached_values
-
-        kwargs_shallow_copy = {**kwargs}
-        kwargs_shallow_copy.pop('invalidate', None)
-        kwargs_set = frozenset(kwargs_shallow_copy)
-
-        if kwargs.get('invalidate', False) or kwargs_set not in cached_values:
-            cached_values[kwargs_set] = f(self, **kwargs)
-
-        return cached_values[kwargs_set]
-
-    return check_recalculate
+def rstrip_zeroes(float_var):
+    return ('%f' % float_var).rstrip('0').rstrip('.')
 
 
-def rstrip_zeroes(float):
-    return ('%f' % float).rstrip('0').rstrip('.')
-
-
-def compact_datetime(datetime):
-    return datetime.astimezone(get_localzone()).strftime("%m-%d %I:%M%p")
+def compact_datetime(datetime_var):
+    return datetime_var.astimezone(get_localzone()).strftime("%m-%d %I:%M%p")
 
 
 def percentage_string(val, digits):
@@ -67,10 +48,13 @@ def filter_courses(courses, query):
 def tabulate_dict(item_to_list, items):
     return dict(zip(items, tabulate(map(item_to_list, items), tablefmt='plain').split('\n')))
 
+
 epoch = datetime.datetime.utcfromtimestamp(0).replace(tzinfo=pytz.utc)
+
 
 def unix_time_seconds(dt):
     return (dt - epoch).total_seconds()
+
 
 def get_course_by_query(clanvas, query, fail_on_ambiguous=False, quiet=False):
     matched_courses = list(filter_courses(clanvas.get_courses().values(), query))
@@ -124,7 +108,7 @@ def call_eagerly(*args):
     return event
 
 
-def threadsafe_lru(func):
+def blocking_lru(func):
     func = functools.lru_cache(maxsize=None)(func)
     lock_dict = defaultdict(threading.Lock)
 
@@ -134,6 +118,7 @@ def threadsafe_lru(func):
             return func(*args, **kwargs)
 
     return _thread_lru
+
 
 def get_submissions_for_assignments(course: Course, assignments):
     assignment_ids = [assignment.id for assignment in assignments]

@@ -1,17 +1,15 @@
-from collections import Sequence
 from functools import lru_cache
 from operator import itemgetter
 
 from canvasapi.assignment import Assignment, AssignmentGroup
 from canvasapi.exceptions import Unauthorized, CanvasException
 from canvasapi.submission import Submission
+from colorama import Fore, Style, Back
 from tree_format import format_tree
 
 from .filters import latest_term_courses, future_assignments
 from .outputter import Outputter
 from .utils import *
-
-from colorama import Fore, Style, Back
 
 
 def calculate_group_ratio(group, assignment_submission_pairs):
@@ -70,10 +68,6 @@ class Lister(Outputter):
                 self.poutput(tabulate(map(assignment_info_items, assignments), tablefmt='plain'))
         else:
             self.poutput('\n'.join([assignment.name for assignment in assignments]))
-
-    def list_all_grades(self, courses: 'Sequence[Course]', long=False, groups=False, ungraded=False):
-        for course in courses:
-            self.list_grades(course, long=long, groups=groups, ungraded=ungraded)
 
     grade_color_thresholds = {
         0.9: Fore.LIGHTGREEN_EX,

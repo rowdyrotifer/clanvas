@@ -49,16 +49,16 @@ class Clanvas(cmd2.Cmd):
         self.complete_lg = self.completers.generic_course_optional_completer
         self.complete_lan = self.completers.generic_course_optional_completer
 
-    @threadsafe_lru
+    @blocking_lru
     def get_courses(self, **kwargs):
         return {course.id: course for course in sorted(self.canvas.get_current_user().get_courses(include=['term', 'total_scores']),
                       key=lambda course: (-course.enrollment_term_id, course.name))}
 
-    @threadsafe_lru
+    @blocking_lru
     def current_user_profile(self, **kwargs):
         return self.canvas.get_current_user().get_profile()
 
-    @threadsafe_lru
+    @blocking_lru
     def list_tabs_cached(self, course_id):
         course = self.get_courses()[course_id]
         return sorted(course.list_tabs(), key=lambda tab: tab.position)

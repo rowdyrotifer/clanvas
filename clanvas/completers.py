@@ -22,7 +22,6 @@ def parse_partial(argparser, line):
         stream = io.StringIO()
         with redirect_stderr(stream):
             opts, _ = argparser.parse_known_args(shlex.split(line)[1:])
-            # print(opts)
             return opts
     except ValueError as e:
         if str(e) == 'No closing quotation':
@@ -32,7 +31,6 @@ def parse_partial(argparser, line):
         import traceback
         traceback.print_exc()
         return None
-
 
 
 class Completers():
@@ -57,11 +55,15 @@ class Completers():
         return list(map(lambda tab: shlex.quote(tab.label.lower()), matched_tabs))
 
     def generic_course_optional_completer(self, text, line, begidx, endidx, default_completer=None):
-        return cmd2.flag_based_complete(text, line, begidx, endidx, flag_dict=self._course_complete_flags, default_completer=default_completer)
+        return cmd2.flag_based_complete(text, line, begidx, endidx, flag_dict=self._course_complete_flags,
+                                        default_completer=default_completer)
 
     def wopen_completer(self, text, line, begidx, endidx):
-        return cmd2.flag_based_complete(text, line, begidx, endidx, flag_dict=self._course_complete_flags, default_completer=self.wopen_tab_completer)
+        return cmd2.flag_based_complete(text, line, begidx, endidx, flag_dict=self._course_complete_flags,
+                                        default_completer=self.wopen_tab_completer)
 
     def pullf_completer(self, text, line, begidx, endidx):
         output_flags = dict.fromkeys(['-o', '--output'], functools.partial(cmd2.path_complete, dir_only=True))
-        return cmd2.flag_based_complete(text, line, begidx, endidx, flag_dict={**self._course_complete_flags, **output_flags})
+        return cmd2.flag_based_complete(text, line, begidx, endidx, flag_dict={
+            **self._course_complete_flags,
+            **output_flags})

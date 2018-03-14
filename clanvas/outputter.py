@@ -8,6 +8,7 @@ class Verbosity(Enum):
     VERBOSE = 2
     DEBUG = 3
 
+
 class Outputter(ABC):
     def __init__(self, printfn, verbosityfn):
         self.printfn = printfn
