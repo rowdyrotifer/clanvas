@@ -64,9 +64,8 @@ lan_parser.add_argument('-t', '--time', nargs=1, type=int, default=None, help='l
 lg_parser = argparse.ArgumentParser(description='List course grades.')
 lg_parser = course_optional(lg_parser)
 lg_parser.add_argument('-l', '--long', action='store_true', help='long listing')
-lg_parser.add_argument('-g', '--groups', action='store_true', help='include assignment groups')
-lg_parser.add_argument('-u', '--ungraded', action='store_true', help='include ungraded assignments')
-lg_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms) if no course specified')
+lg_parser.add_argument('-u', '--ungraded', action='store_false', help='include ungraded assignments')
+lg_parser.add_argument('-a', '--all', action='store_true', help='show grades for all courses (previous terms) if no course is specified')
 
 login_parser = argparse.ArgumentParser(description='Set URL and token to use for all Canvas API calls')
 login_parser.add_argument('url', help='URL of Canvas server')

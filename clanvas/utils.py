@@ -36,16 +36,28 @@ def compact_datetime(datetime):
     return datetime.astimezone(get_localzone()).strftime("%m-%d %I:%M%p")
 
 
+def percentage_string(val, digits):
+    val *= 10 ** (digits + 2)
+    return '{1:.{0}f}%'.format(digits, val / 10 ** digits)
+
+
+def rstripped_fraction(score, possible):
+    numerator = rstrip_zeroes(score) if type(score) == float else str(score)
+    denominator = rstrip_zeroes(possible) if type(possible) == float else str(possible)
+    return f'{numerator}/{denominator}'
+
+
 def unique_course_code(course):
     return course.course_code.replace(' ', '') + '-' + str(course.id)
 
 
 def assignment_info_items(a):
-    return [a.id, a.due_at_date.astimezone(get_localzone()).strftime("%a, %d %b %I:%M%p") if hasattr(a, 'due_at_date') else '', a.name]
+    return [a.id, compact_datetime(a.due_at_date) if hasattr(a, 'due_at_date') else '', a.name]
 
 
 def submission_info_items(s):
     return [s.id, s.score if hasattr(s, 'score') else '']
+
 
 def filter_courses(courses, query):
     query_processed = query.replace(' ', '').lower()

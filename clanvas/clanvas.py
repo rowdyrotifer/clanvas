@@ -143,7 +143,9 @@ class Clanvas(cmd2.Cmd):
         del opts_copy['all']
         if opts.course is None:
             del opts_copy['course']
-            return self.lister.list_all_grades(self.get_courses().values() if opts.all else latest_term_courses(self.get_courses().values()), **opts_copy)
+            courses = self.get_courses().values() if opts.all else latest_term_courses(self.get_courses().values())
+            for course in courses:
+                self.lister.list_grades(course, **opts_copy)
         else:
             return self.lister.list_grades(**opts_copy)
 
@@ -159,12 +161,12 @@ class Clanvas(cmd2.Cmd):
         if opts.tab is not None and opts.course is not None:
             tabs = self.list_tabs_cached(opts.course.id)
 
-            tab = next(filter(lambda tab: opts.tab.lower() in tab.label.lower(), tabs), None)
-            if tab is None:
+            matched_tab = next(filter(lambda tab: opts.tab.lower() in tab.label.lower(), tabs), None)
+            if matched_tab is None:
                 self.poutput(f'No tab found matching {opts.tab}')
                 return False
 
-            webbrowser.open(tab.full_url, new=2)
+            webbrowser.open(matched_tab.full_url, new=2)
 
 
         return False
