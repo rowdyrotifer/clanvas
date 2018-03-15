@@ -229,8 +229,6 @@ def main():
     if 'libedit' in readline.__doc__:
         readline.parse_and_bind("bind -e")
         readline.parse_and_bind("bind '\t' rl_complete")
-    else:
-        readline.parse_and_bind("tab: complete")
 
     colorama.init()  # Windows color support
 
