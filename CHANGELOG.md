@@ -1,11 +1,12 @@
 ### 0.1.1
 
-* Added tab-completion to wopen command.
-* Added tab-completion to the -c (--course) option for course-optional commands.
-* Added output directory (-o) option to the pullf command.
-* Added assignment group and overall class grades.
-* Added grade color based on score.
-* Added quiet option (-q) to the login command.
+* Eagerly request courses in background on login.
+* Tab-complete `wopen` command.
+* Tab-complete the `-c` (`--course`) option for course-optional commands.
+* Output directory (`-o`) option available to the `pullf` command.
+* Assignment group grades and overall class grades shown in the `lg` command.
+* Grades now colored based on score in the `lg` command.
+* Quiet (`-q`) option available to the `login` command.
 
 ### 0.1
 
