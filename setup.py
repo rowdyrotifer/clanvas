@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='clanvas',
-    version='0.1.0',
+    version='0.1.1',
     url='https://github.com/MarkLalor/Clanvas',
     license='MIT',
     author='Mark Lalor',
