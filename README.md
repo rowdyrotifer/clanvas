@@ -156,7 +156,7 @@ $ conda create --name py36 python=3.6
 
 Now, somewhere after the `export PATH=/usr/local/anaconda3/bin:"$PATH"` line in your rc file, add the following line:
 ```
-$ source activate py36
+source activate py36
 ```
 Save your rc file, and once again `source ~/.zshrc` or equivalent.
 
