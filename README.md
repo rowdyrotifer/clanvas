@@ -3,13 +3,27 @@ Command-line shell client for the [Canvas Learning Management System](https://gi
 
 ### Installation
 
-Clanvas is hosted on [PyPi](https://pypi.python.org/pypi/clanvas) and can be installed with `pip`
+Clanvas is hosted on [PyPi](https://pypi.python.org/pypi/clanvas) and can be installed with `pip`.
+
+Clanvas requires Python 3.6+
 
 ```
 pip install clanvas
 ```
 
-`clanvas` should now be available on your path.
+The `clanvas` command should now be on your path!
+
+Usage will also require [generating a Canvas API token](#generating-an-api-token) which will be used to log in.
+
+##### Note: in order to have 100% proper line editing and tab completion support, further configuration may be required.
+
+Clanvas relies on the capabilities provided by `GNU readline` or an equivalent library. The situation varies by system.
+
+|         |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+|---------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Linux   | `GNU readline` is most likely already installed, no further configuration required.                                                                                                                                                                                                                                                                                                                                                                                                             |
+| macOS   | Apple ships it's operating system with the BSD-licensed `editline` since `GNU readline` is released under a GPL (copyleft) license. By default, Clanvas will try to use `editline` if this is what is available. However, certain features like navigating previous commands and tab completion may not work correctly in all cases. The best/recommended solution is to ensure you are using Python with `GNU readline`. See [GNU readline on macOS](#gnu-readline-on-macos) for more details. |
+| Windows | Currently Windows is untested, but the we recommend installing the `pyreadline` Python module.                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 ### Example Usage
 Start the Clanvas shell
@@ -90,6 +104,7 @@ In addition, the shell provides the following commands:
 | cc        | change current class  |
 | la        | list assignments      |
 | lg        | list grades           |
+| pullf     | pull files            |
 | wopen     | open in web interface |
 | whoami    | show login info       |
 | quit      | quit the shell        |
@@ -100,6 +115,66 @@ Use the `-h` flag to show usage details for any command.
 1. Navigate to /profile/settings
 2. Under the "Approved Integrations" section, click the button to generate a new access token.
 3. Once the token is generated, you cannot view it again, so you'll have to generate a new token if it is lost.
+
+### GNU readline on macOS
+
+To check which line editor library your current python is using, check the output of
+
+```
+echo "import readline\nprint(readline.__doc__)" | python
+```
+
+You should see one of the following messages.
+```
+Importing this module enables command line editing using GNU readline.
+Importing this module enables command line editing using libedit readline.
+```
+
+If you see the first message, you are good to go!
+
+If you see the latter, the easiest fix is to install and configure `Anaconda`, a package manager that provides a Python distribution that comes with `GNU readline` set up as the command line editor.
+
+Install `Anaconda`
+```
+$ brew cask install anaconda
+```
+
+Add Anaconda binaries to your path by amending your `~/.bash_profile` or `~/.zshrc` file
+```
+# At some point after your PATH is defined...
+export PATH=/usr/local/anaconda3/bin:"$PATH"
+```
+
+Save and then source your edited rc file with `source ~/.zshrc` or equivalent (or restart your terminal).
+
+**Now `Anaconda`'s commands are available to use!**
+
+Create a new virtual environment
+```
+$ conda create --name py36 python=3.6
+```
+
+Now, somewhere after the `export PATH=/usr/local/anaconda3/bin:"$PATH"` line in your rc file, add the following line:
+```
+$ source activate py36
+```
+Save your rc file, and once again `source ~/.zshrc` or equivalent.
+
+Check your Python version, you should see `Anaconda, Inc.` in the name.
+```
+$ python --version
+Python 3.6.4 :: Anaconda, Inc.
+```
+
+Now check if `GNU readline` is being used
+```
+$ echo "import readline\nprint(readline.__doc__)" | python
+Importing this module enables command line editing using GNU readline.
+```
+
+Congratulations, you have installed and set up a Python distribution with `GNU readline`!
+
+Run `pip install clanvas` to celebrate.
 
 ## Contributing
 Currently the project is in an exploratory phase. I am implementing features that that I find useful and trying to tweak them as I go along to find a balance of easy-to-use and powerful. I would greatly appreciate feedback about what is missing or what interfaces should be changed.
