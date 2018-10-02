@@ -215,14 +215,12 @@ class Lister:
         except CanvasException as e:
             self.outputter.poutput(f'{course.name}: {str(e)}')
 
-    def list_announcements(self, course: Course, number=None, days=None, message=False):
+    def list_announcements(self, announcements_provider, course: Course, number=None, days=None, message=False):
         if course is None:
             self.outputter.poutput('No course specified.')
             return False
 
-        discussion_topics = sorted(course.get_discussion_topics(only_announcements=True), key=lambda t: t.posted_at_date)
-
-        display_topics = discussion_topics
+        display_topics = announcements_provider(course.id)
 
         if number is not None:
             display_topics = display_topics[-number:]

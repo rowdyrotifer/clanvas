@@ -28,8 +28,6 @@ class Clanvas(cmd2.Cmd):
 
         super(Clanvas, self).__init__()
 
-        self.setup_shell_tab_completion()
-
         self.url = None
         self.host = None
         self.canvas = None  # type: Canvas
@@ -45,17 +43,13 @@ class Clanvas(cmd2.Cmd):
         self.lister = Lister(self.outputter)
         self.printer = Printer(self.outputter)
 
+        # Clanvas commands
         completers = Completers(self)
-
-        self.complete_cc = completers.course_completer
-        self.complete_wopen = completers.wopen_completer
-        self.complete_pullf = completers.pullf_completer
-
-        self.complete_la = completers.generic_course_optional_completer
-        self.complete_lg = completers.generic_course_optional_completer
-        self.complete_lann = completers.generic_course_optional_completer
-
-        self.complete_catann = completers.catann_completer
+        for command, completer in completers.completer_mapping.items():
+            setattr(self, 'complete_' + command, completer)
+        # GNU commands
+        for command in ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 'tail', 'ls']:
+            setattr(self, 'complete_' + command, functools.partialmethod(self.path_complete, dir_only=False))
 
     def get_caches(self):
         return self._caches
@@ -130,9 +124,6 @@ class Clanvas(cmd2.Cmd):
             except Exception as ex:
                 self.poutput('{}'.format(ex))
 
-    def complete_cd (self, text, line, begidx, endidx):
-        return self.path_complete(text, line, begidx, endidx, dir_only=True)
-
     @cmd2.with_argparser(cc_parser)
     def do_cc(self, opts):
         if opts.course is '' or opts.course is '~':
@@ -171,7 +162,7 @@ class Clanvas(cmd2.Cmd):
     @cmd2.with_argparser(lann_parser)
     @argparser_course_optional_wrapper
     def do_lann(self, opts):
-        return self.lister.list_announcements(**vars(opts))
+        return self.lister.list_announcements(**vars(opts), announcements_provider=self.list_announcements_cached)
 
     @cmd2.with_argparser(catann_parser)
     @argparser_course_optional_wrapper
@@ -234,15 +225,7 @@ class Clanvas(cmd2.Cmd):
 
         self.file_synchronizer.pull_all_files(destination_path, opts.course)
 
-    def setup_shell_tab_completion(self):
-        # For specifying tab-completion for default shell commands
-        # TODO: add basically everything from GNU Coreutils http://www.gnu.org/software/coreutils/manual/html_node/index.html
-        # Better TODO: make shell completion default to path_complete
 
-        completion_map_dir_file = ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 'tail', 'ls']
-
-        for command in completion_map_dir_file:
-            setattr(self, 'complete_' + command, functools.partialmethod(self.path_complete, dir_only=False))
 
 
 def main():
