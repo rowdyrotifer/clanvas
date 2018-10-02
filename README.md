@@ -104,6 +104,8 @@ In addition, the shell provides the following commands:
 | cc        | change current class  |
 | la        | list assignments      |
 | lg        | list grades           |
+| lann      | list announcements    |
+| catann    | print announcements   |
 | pullf     | pull files            |
 | wopen     | open in web interface |
 | whoami    | show login info       |
