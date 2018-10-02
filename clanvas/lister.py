@@ -9,7 +9,6 @@ from html2text import html2text
 from tree_format import format_tree
 
 from .filters import latest_term_courses, future_assignments, days_from_today
-from .outputter import Outputter
 from .utils import *
 
 

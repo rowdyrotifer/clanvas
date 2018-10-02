@@ -1,11 +1,11 @@
 import os
+import readline
 import webbrowser
 from os.path import isfile, join, expanduser
 from urllib.parse import urlparse
 
 import cmd2
 import colorama
-import readline
 from canvasapi import Canvas
 from colorama import Fore, Style
 
@@ -56,8 +56,9 @@ class Clanvas(cmd2.Cmd):
 
     @blocking_lru
     def get_courses(self, **kwargs):
-        return {course.id: course for course in sorted(self.canvas.get_current_user().get_courses(include=['term', 'total_scores']),
-                      key=lambda course: (-course.enrollment_term_id, course.name))}
+        return {course.id: course for course in sorted(
+            self.canvas.get_current_user().get_courses(include=['term', 'total_scores']),
+            key=lambda course: (-course.enrollment_term_id, course.name))}
 
     @blocking_lru
     def current_user_profile(self, **kwargs):
@@ -76,11 +77,15 @@ class Clanvas(cmd2.Cmd):
     def get_verbosity(self) -> Verbosity:
         return Verbosity[self.verbosity]
 
-    prompt_string = Fore.LIGHTGREEN_EX + '{login_id}@{host}' + Style.RESET_ALL + ':' + Fore.YELLOW + '{pwc}' + Style.RESET_ALL + ':' + Fore.BLUE + '{pwd} ' + Style.RESET_ALL + '$ '
+    prompt_string = Fore.LIGHTGREEN_EX + '{login_id}@{host}' + Style.RESET_ALL + ':'\
+        + Fore.YELLOW + '{pwc}' + Style.RESET_ALL + ':' + Fore.BLUE + '{pwd} ' + Style.RESET_ALL + '$ '
 
     verbosity = 'NORMAL'
 
     canvas_path = expanduser('~/canvas')
+
+    # cmd2 attribute that determines the prompt format
+    prompt = property(lambda self: self.get_prompt())
 
     def get_prompt(self):
         if self.canvas is None:
@@ -92,10 +97,6 @@ class Clanvas(cmd2.Cmd):
             pwc=self.current_course.course_code if self.current_course is not None else '~',
             pwd=os.getcwd().replace(self.home, '~')
         )
-
-
-    # cmd2 attribute
-    prompt = property(lambda self: self.get_prompt())
 
     #     _____                                          _
     #    / ____|                                        | |
@@ -225,11 +226,10 @@ class Clanvas(cmd2.Cmd):
             return False
 
         code = unique_course_code(opts.course)
-        destination_path = join(*[os.path.expanduser('~'), 'canvas', 'courses', code, 'files']) if opts.output is None else opts.output
+        destination_path = join(
+            *[os.path.expanduser('~'), 'canvas', 'courses', code, 'files']) if opts.output is None else opts.output
 
         self.file_synchronizer.pull_all_files(destination_path, opts.course)
-
-
 
 
 def main():

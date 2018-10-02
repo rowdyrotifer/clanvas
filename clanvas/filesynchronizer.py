@@ -7,7 +7,6 @@ from canvasapi.exceptions import Unauthorized
 from canvasapi.file import File
 from canvasapi.folder import Folder
 
-from .outputter import Outputter
 from .utils import *
 
 T = TypeVar('T')

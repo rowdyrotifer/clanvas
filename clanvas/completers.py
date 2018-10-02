@@ -25,7 +25,7 @@ def parse_partial(argparser, line):
         if str(e) == 'No closing quotation':
             print(line + '\'')
             return parse_partial(argparser, line + '\'')
-    except:
+    except Exception as e:
         import traceback
         traceback.print_exc()
         return None

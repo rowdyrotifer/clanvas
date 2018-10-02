@@ -16,8 +16,10 @@ def rstrip_zeroes(float_var):
 def compact_datetime(datetime_var):
     return datetime_var.astimezone(get_localzone()).strftime("%m-%d %I:%M%p")
 
+
 def long_datetime(datetime_var):
     return datetime_var.astimezone(get_localzone()).strftime("%A, %B %d, %Y %I:%M%p")
+
 
 def percentage_string(val, digits):
     val *= 10 ** (digits + 2)
@@ -94,7 +96,8 @@ def get_course_by_query(clanvas, query, fail_on_ambiguous=False, quiet=False):
                 clanvas.poutput(f'Choice {choice} is not numeric.')
     else:
         if not quiet:
-            clanvas.poutput('Could not find a matching course.' if not fail_on_ambiguous else 'Ambiguous course query string.')
+            clanvas.poutput('Could not find a matching course.'
+                            if not fail_on_ambiguous else 'Ambiguous course query string.')
 
     return None
 
