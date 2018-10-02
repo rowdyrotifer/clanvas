@@ -86,7 +86,7 @@ Clanvas will look for a `.clanvasrc` file in your home directory to execute init
 echo "login https://canvas.school.edu bOYc5cOIldA3eB9NTr7X0Um9Z8TPMACb0HtdgHTMtp10T5UKH0b4HOqTmOCvWZlYRpJ9dN" > ~/.clanvasrc
 ```
 
-Additionally, you should change the permissions of this file so that other users of your computer cannot read your API token and consequently access your account.
+**Important**: you should change the permissions of this file so that other users of your computer cannot read your API token and consequently gain access your account. `chmod 600` specifies that only the file owner may read and write the file.
 
 ```
 chmod 600 ~/.clanvasrc
@@ -94,7 +94,7 @@ chmod 600 ~/.clanvasrc
 
 ### Available Commands
 
-In the Clanvas shell, all commands already on your system PATH are available.
+In the Clanvas shell, all commands already on your system `PATH` are available.
 
 In addition, the shell provides the following commands:
 
@@ -111,7 +111,7 @@ In addition, the shell provides the following commands:
 | whoami    | show login info       |
 | quit      | quit the shell        |
 
-Use the `-h` flag to show usage details for any command.
+Type `help` to see all commands, and use the `-h` flag to show usage details for any particular command.
 
 ### Generating an API Token
 1. Navigate to /profile/settings
@@ -179,13 +179,17 @@ Congratulations, you have installed and set up a Python distribution with `GNU r
 Run `pip install clanvas` to celebrate.
 
 ## Contributing
-Currently the project is in an exploratory phase. I am implementing features that that I find useful and trying to tweak them as I go along to find a balance of easy-to-use and powerful. I would greatly appreciate feedback about what is missing or what interfaces should be changed.
+Currently the project is in an exploratory phase. I am implementing features that that I find useful and trying to tweak them as I go along to find a balance of easy-to-use and powerful.
 
-Once the general interfaces and most core commands are solidified, then tests will be added and a formal TODO list may be created.
+I would greatly appreciate feedback about what is missing or what interfaces should be changed.
+
+The project is definitely becoming more stable and gaining a clear direction, I've slowed down with the willy-nilly changes.
+
+I think regression tests would be a good place to start. cmd2 already [has a mechanism](https://cmd2.readthedocs.io/en/latest/transcript.html?highlight=history) for doing this.
 
 ## Built With
 * [cmd2](https://github.com/python-cmd2/cmd2)
-* [CanvasAPI](https://github.com/ucfopen/canvasapi)
+* [canvasapi](https://github.com/ucfopen/canvasapi)
 
 ## License
 
