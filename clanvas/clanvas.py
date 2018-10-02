@@ -172,18 +172,22 @@ class Clanvas(cmd2.Cmd):
     @cmd2.with_argparser(wopen_parser)
     @argparser_course_optional_wrapper
     def do_wopen(self, opts):
-        if opts.tab is not None and opts.course is not None:
-            tabs = self.list_tabs_cached(opts.course.id)
+        if opts.course is None:
+            self.poutput('No course specified.')
+            return False
 
-            matched_tab = next(filter(lambda tab: opts.tab.lower() in tab.label.lower(), tabs), None)
-            if matched_tab is None:
-                self.poutput(f'No tab found matching {opts.tab}')
-                return False
+        course_tabs = self.list_tabs_cached(opts.course.id)
+        given_tabs_set = frozenset([tab.lower() for tab in opts.tabs])
 
-            webbrowser.open(matched_tab.full_url, new=2)
+        matched_tabs = filter(lambda course_tab: course_tab.label.lower() in given_tabs_set, course_tabs)
+        if not matched_tabs:
+            self.poutput(f'No tab found matching "{tab}"')
+            return False
 
+        for tab in matched_tabs:
+            webbrowser.open(tab.full_url, new=2)
 
-        return False
+        return True
 
     @cmd2.with_argparser(login_parser)
     def do_login(self, opts):

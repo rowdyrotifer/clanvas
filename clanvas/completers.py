@@ -51,25 +51,23 @@ class Completers:
         return list(map(unique_course_code, filter_courses(self.clanvas.get_courses().values(), line[begidx:endidx])))
 
     def _catann_tab_completer(self, text, line, begidx, endidx):
-        opts = parse_partial(catann_parser, line)
+        opts = parse_partial(catann_parser, line[0:endidx])
         if opts is None:
             return []
 
         opts.course = course_query_or_cc(self.clanvas, opts.course, fail_on_ambiguous=True, quiet=True)
-
         if opts.course is None:
             return []
 
-        announcements = self.clanvas.list_announcements_cached(opts.course.id)
+        matching_string = '' if len(opts.ids) == 0 or line[endidx-1] == ' ' else opts.ids[-1]
 
-        matched_announcements = list(filter(lambda ann: str(ann.id).startswith(str(opts.id[0])), announcements))
+        announcements = [str(ann.id) for ann in self.clanvas.list_announcements_cached(opts.course.id)]
+        matched_announcements = filter(lambda ann: ann.startswith(matching_string), announcements)
 
-        items = list(map(lambda ann: str(ann.id), matched_announcements))
-
-        return items
+        return list(matched_announcements)
 
     def _wopen_tab_completer(self, text, line, begidx, endidx):
-        opts = parse_partial(wopen_parser, line)
+        opts = parse_partial(wopen_parser, line[0:endidx])
         if opts is None:
             return []
 
@@ -77,8 +75,10 @@ class Completers:
         if opts.course is None:
             return []
 
+        matching_string = '' if len(opts.tabs) == 0 or line[endidx-1] == ' ' else opts.tabs[-1]
+
         tabs = self.clanvas.list_tabs_cached(opts.course.id)
-        matched_tabs = filter(lambda tab: tab.label.lower().startswith(opts.tab.lower()), tabs)
+        matched_tabs = filter(lambda tab: tab.label.lower().startswith(matching_string.lower()), tabs)
         return list(map(lambda tab: shlex.quote(tab.label.lower()), matched_tabs))
 
     def _course_option_completer(self, text, line, begidx, endidx, all_else=None):

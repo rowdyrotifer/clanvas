@@ -61,9 +61,9 @@ lann_parser = course_optional(lann_parser)
 lann_parser.add_argument('-n', '--number', type=int, default=None, help='number of announcements to display')
 lann_parser.add_argument('-d', '--days', type=int, default=None, help='only show announcements this many days old')
 
-catann_parser = argparse.ArgumentParser(description='Print a course announcement.')
+catann_parser = argparse.ArgumentParser(description='Print course announcements.')
 catann_parser = course_optional(catann_parser)
-catann_parser.add_argument('id', nargs=1, help='id of announcement to print')
+catann_parser.add_argument('ids', nargs='*', help='ids of announcements to print')
 
 lg_parser = argparse.ArgumentParser(description='List course grades.')
 lg_parser = course_optional(lg_parser)
@@ -84,6 +84,6 @@ whoami_parser = argparse.ArgumentParser()
 whoami_parser.add_argument('-v', '--verbose', action='store_true',
                            help='display more info about the logged in user')
 
-wopen_parser = argparse.ArgumentParser(description='Open in canvas web interface.')
+wopen_parser = argparse.ArgumentParser(description='Open tabs in canvas web interface.')
 wopen_parser = course_optional(wopen_parser)
-wopen_parser.add_argument('tab', nargs='?', default='', help='course tab to open')
+wopen_parser.add_argument('tabs', nargs='*', default='', help='course tabs to open')
