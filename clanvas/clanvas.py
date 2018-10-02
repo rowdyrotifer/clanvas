@@ -7,6 +7,8 @@ from urllib.parse import urlparse
 import cmd2
 import colorama
 from canvasapi import Canvas
+from canvasapi.assignment import Assignment
+from canvasapi.exceptions import ResourceDoesNotExist
 from colorama import Fore, Style
 
 from .completers import Completers
@@ -73,6 +75,11 @@ class Clanvas(cmd2.Cmd):
     def list_announcements_cached(self, course_id):
         course = self.get_courses()[course_id]
         return sorted(course.get_discussion_topics(only_announcements=True), key=lambda t: t.posted_at_date)
+
+    @blocking_lru
+    def list_assignments_cached(self, course_id):
+        course = self.get_courses()[course_id]
+        return sorted(course.get_assignments(), key=lambda t: t.created_at_date)
 
     def get_verbosity(self) -> Verbosity:
         return Verbosity[self.verbosity]
@@ -145,7 +152,7 @@ class Clanvas(cmd2.Cmd):
     @cmd2.with_argparser(la_parser)
     @argparser_course_optional_wrapper
     def do_la(self, opts):
-        return self.lister.list_assignments(**vars(opts))
+        return self.lister.list_assignments(**vars(opts), assignments_provider=self.list_assignments_cached)
 
     @cmd2.with_argparser(lg_parser)
     @argparser_course_optional_wrapper
@@ -169,6 +176,23 @@ class Clanvas(cmd2.Cmd):
     @argparser_course_optional_wrapper
     def do_catann(self, opts):
         return self.printer.print_announcement(**vars(opts))
+
+    @cmd2.with_argparser(ua_parser)
+    @argparser_course_optional_wrapper
+    def do_ua(self, opts):
+        if opts.course is None:
+            self.outputter.poutput('No course specified.')
+            return False
+
+        selected_course = opts.course # type: Course
+        try:
+            assignment: Assignment = selected_course.get_assignment(opts.id)
+            assignment.submit({'submission_type': 'online_upload'}, opts.file)
+            self.outputter.poutput(f'Uploaded {opts.file} to {assignment.id} ({assignment.name})')
+        except ResourceDoesNotExist as e:
+            self.outputter.poutput('Invalid assignment ID.')
+            self.outputter.poutput_debug(f'Course {opts.course.id} has no assignment {opts.id}')
+            return False
 
     @cmd2.with_argparser(wopen_parser)
     @argparser_course_optional_wrapper

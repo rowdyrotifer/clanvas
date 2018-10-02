@@ -41,12 +41,12 @@ class Lister:
         else:
             self.outputter.poutput('\n'.join([unique_course_code(c) for c in display_courses]))
 
-    def list_assignments(self, course: Course, long=False, submissions=False, upcoming=False):
+    def list_assignments(self, course: Course, assignments_provider, long=False, submissions=False, upcoming=False):
         if course is None:
             self.outputter.poutput('No course specified.')
             return False
 
-        assignments = course.get_assignments()
+        assignments = assignments_provider(course.id)
 
         if upcoming:
             assignments = future_assignments(assignments)

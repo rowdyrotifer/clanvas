@@ -80,6 +80,11 @@ pullf_parser = argparse.ArgumentParser(description='Pull course files to local d
 pullf_parser = course_optional(pullf_parser)
 pullf_parser.add_argument('-o', '--output', help='location to save course files')
 
+ua_parser = argparse.ArgumentParser(description='Upload a submission to an assignment')
+ua_parser = course_optional(ua_parser)
+ua_parser.add_argument('id', type=int, nargs='?', default=None, help='id of assignment to upload a submission to')
+ua_parser.add_argument('file', nargs='?', default=None, help='file to submit')
+
 whoami_parser = argparse.ArgumentParser()
 whoami_parser.add_argument('-v', '--verbose', action='store_true',
                            help='display more info about the logged in user')

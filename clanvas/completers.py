@@ -3,7 +3,7 @@ import io
 import shlex
 from contextlib import redirect_stderr
 
-from .interfaces import wopen_parser, course_query_or_cc, catann_parser
+from .interfaces import wopen_parser, course_query_or_cc, catann_parser, ua_parser
 from .utils import unique_course_code, filter_courses
 
 
@@ -29,6 +29,7 @@ def parse_partial(argparser, line):
         import traceback
         traceback.print_exc()
         return None
+    return None
 
 
 class Completers:
@@ -44,11 +45,16 @@ class Completers:
             'lann': self._course_option_completer,
             'lg': self._course_option_completer,
             'pullf': self._pullf_tab_completer,
+            'ua': functools.partial(self._course_option_completer, all_else=self._ua_tab_completer),
             'wopen': functools.partial(self._course_option_completer, all_else=self._wopen_tab_completer)
         }
 
     def _course_completer(self, text, line, begidx, endidx):
         return list(map(unique_course_code, filter_courses(self.clanvas.get_courses().values(), line[begidx:endidx])))
+
+    def _course_option_completer(self, text, line, begidx, endidx, all_else=None):
+        return self.clanvas.flag_based_complete(
+            text, line, begidx, endidx, flag_dict=self._course_complete_flags, all_else=all_else)
 
     def _catann_tab_completer(self, text, line, begidx, endidx):
         opts = parse_partial(catann_parser, line[0:endidx])
@@ -81,9 +87,23 @@ class Completers:
         matched_tabs = filter(lambda tab: tab.label.lower().startswith(matching_string.lower()), tabs)
         return list(map(lambda tab: shlex.quote(tab.label.lower()), matched_tabs))
 
-    def _course_option_completer(self, text, line, begidx, endidx, all_else=None):
-        return self.clanvas.flag_based_complete(
-            text, line, begidx, endidx, flag_dict=self._course_complete_flags, all_else=all_else)
+    def _ua_tab_completer(self, text, line, begidx, endidx):
+        opts = parse_partial(ua_parser, line[0:endidx])
+        if opts is None:
+            return []
+
+        opts.course = course_query_or_cc(self.clanvas, opts.course, fail_on_ambiguous=True, quiet=True)
+        if opts.course is None:
+            return []
+
+        if (opts.file is None and line[endidx - 1] != ' ') or opts.id is None:
+            # This means they're still typing the first argument since the second is None
+            matching_string = '' if opts.id is None else str(opts.id)
+            course_assignments_ids = [str(assignment.id) for assignment in self.clanvas.list_assignments_cached(opts.course.id)]
+            matched_assignment_ids = filter(lambda assignment_id: assignment_id.startswith(matching_string), course_assignments_ids)
+            return list(matched_assignment_ids)
+        elif opts.file is None:
+            return self.clanvas.path_complete(text, line, begidx, endidx)
 
     def _pullf_tab_completer(self, text, line, begidx, endidx):
         output_flags = dict.fromkeys(['-o', '--output'], functools.partial(self.clanvas.path_complete, dir_only=True))
