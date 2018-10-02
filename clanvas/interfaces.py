@@ -34,6 +34,7 @@ def argparser_course_optional_wrapper(with_argparser):
 
     return inject_argparser
 
+
 DEFAULT = '__DEFAULT__'
 
 cc_parser = argparse.ArgumentParser()
@@ -55,10 +56,14 @@ la_parser.add_argument('-l', '--long', action='store_true', help='long listing')
 la_parser.add_argument('-s', '--submissions', action='store_true', help='show submissions')
 la_parser.add_argument('-u', '--upcoming', action='store_true', help='show only upcoming assignments')
 
-lan_parser = argparse.ArgumentParser(description='List course announcements.')
-lan_parser = course_optional(lan_parser)
-lan_parser.add_argument('-n', '--number', nargs=1, type=int, default=5, help='long listing')
-lan_parser.add_argument('-t', '--time', nargs=1, type=int, default=None, help='long listing')
+lann_parser = argparse.ArgumentParser(description='List course announcements.')
+lann_parser = course_optional(lann_parser)
+lann_parser.add_argument('-n', '--number', type=int, default=None, help='number of announcements to display')
+lann_parser.add_argument('-d', '--days', type=int, default=None, help='only show announcements this many days old')
+
+catann_parser = argparse.ArgumentParser(description='Print a course announcement.')
+catann_parser = course_optional(catann_parser)
+catann_parser.add_argument('id', nargs=1, help='id of announcement to print')
 
 lg_parser = argparse.ArgumentParser(description='List course grades.')
 lg_parser = course_optional(lg_parser)

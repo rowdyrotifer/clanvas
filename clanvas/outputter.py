@@ -9,7 +9,7 @@ class Verbosity(Enum):
     DEBUG = 3
 
 
-class Outputter(ABC):
+class Outputter:
     def __init__(self, printfn, verbosityfn):
         self.printfn = printfn
         self.verbosityfn = verbosityfn

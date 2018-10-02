@@ -30,7 +30,10 @@ def length_file_tree(folder: FileTree) -> int:
     return sum(map(length_file_tree, folder.folders)) + len(folder.files)
 
 
-class FileSynchronizer(Outputter):
+class FileSynchronizer:
+    def __init__(self, outputter):
+        self.outputter = outputter
+
     def pull_file_tree(self, directory, tree):
         pathlib.Path(join(directory, tree.path)).mkdir(parents=True, exist_ok=True)
 
@@ -51,9 +54,9 @@ class FileSynchronizer(Outputter):
         top_level_folder = next(folder for folder in course.list_folders() if folder.parent_folder_id is None)
         try:
             tree = build_canvas_file_tree('.', top_level_folder)
-            self.poutput_verbose('Detected ' + str(length_file_tree(tree)) + ' files.')
+            self.outputter.poutput_verbose('Detected ' + str(length_file_tree(tree)) + ' files.')
             self.pull_file_tree(directory, tree)
         except Unauthorized:
-            self.poutput('Not authorized to access this course\'s files')
+            self.outputter.poutput('Not authorized to access this course\'s files')
 
 

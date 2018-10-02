@@ -5,9 +5,10 @@ from canvasapi.assignment import Assignment, AssignmentGroup
 from canvasapi.exceptions import Unauthorized, CanvasException
 from canvasapi.submission import Submission
 from colorama import Fore, Style, Back
+from html2text import html2text
 from tree_format import format_tree
 
-from .filters import latest_term_courses, future_assignments
+from .filters import latest_term_courses, future_assignments, days_from_today
 from .outputter import Outputter
 from .utils import *
 
@@ -26,7 +27,10 @@ def calculate_group_ratio(group, assignment_submission_pairs):
     return ratio, total_points, total_possible
 
 
-class Lister(Outputter):
+class Lister:
+    def __init__(self, outputter):
+        self.outputter = outputter
+
     def list_courses(self, courses, all=False, long=False):
         display_courses = courses if all else latest_term_courses(courses)
 
@@ -34,13 +38,13 @@ class Lister(Outputter):
             def course_info_items(c):
                 return [c.course_code, c.id, c.term['name'] if hasattr(c, 'term') else '', c.name]
 
-            self.poutput(tabulate(map(course_info_items, display_courses), tablefmt='plain'))
+            self.outputter.poutput(tabulate(map(course_info_items, display_courses), tablefmt='plain'))
         else:
-            self.poutput('\n'.join([unique_course_code(c) for c in display_courses]))
+            self.outputter.poutput('\n'.join([unique_course_code(c) for c in display_courses]))
 
     def list_assignments(self, course: Course, long=False, submissions=False, upcoming=False):
         if course is None:
-            self.poutput('No course specified.')
+            self.outputter.poutput('No course specified.')
             return False
 
         assignments = course.get_assignments()
@@ -63,11 +67,11 @@ class Lister(Outputter):
 
                 tree = (unique_course_code(course), [(formatted, submissions_by_assignment[assignment.id]) for assignment, formatted in tabulated_assignments.items()])
 
-                self.poutput(format_tree(tree, format_node=itemgetter(0), get_children=itemgetter(1)))
+                self.outputter.poutput(format_tree(tree, format_node=itemgetter(0), get_children=itemgetter(1)))
             else:
-                self.poutput(tabulate(map(assignment_info_items, assignments), tablefmt='plain'))
+                self.outputter.poutput(tabulate(map(assignment_info_items, assignments), tablefmt='plain'))
         else:
-            self.poutput('\n'.join([assignment.name for assignment in assignments]))
+            self.outputter.poutput('\n'.join([assignment.name for assignment in assignments]))
 
     grade_color_thresholds = {
         0.9: Fore.LIGHTGREEN_EX,
@@ -147,7 +151,7 @@ class Lister(Outputter):
 
     def list_grades(self, course: Course, long=False, ungraded=True):
         if course is None:
-            self.poutput('No course specified.')
+            self.outputter.poutput('No course specified.')
             return False
 
         try:
@@ -205,15 +209,37 @@ class Lister(Outputter):
                 else:
                     return list(filter(lambda item: ungraded or item[1] is not None, node[1]))
 
-            self.poutput(format_tree(tree, format_node=format_node, get_children=get_children), end='')
+            self.outputter.poutput(format_tree(tree, format_node=format_node, get_children=get_children), end='')
         except Unauthorized:
-            self.poutput(f'{course.name}: Unauthorized')
+            self.outputter.poutput(f'{course.name}: Unauthorized')
         except CanvasException as e:
-            self.poutput(f'{course.name}: {str(e)}')
+            self.outputter.poutput(f'{course.name}: {str(e)}')
 
-    def list_announcements(self, course: Course, number=5, time=None):
+    def list_announcements(self, course: Course, number=None, days=None, message=False):
         if course is None:
-            self.poutput('No course specified.')
+            self.outputter.poutput('No course specified.')
             return False
+
+        discussion_topics = sorted(course.get_discussion_topics(only_announcements=True), key=lambda t: t.posted_at_date)
+
+        display_topics = discussion_topics
+
+        if number is not None:
+            display_topics = display_topics[-number:]
+
+        if days is not None:
+            display_topics = days_from_today(display_topics, days, key=lambda t: t.posted_at_date)
+
+
+        if message:
+            def print_topic(topic):
+                return '\n'.join([topic.user_name, topic.title, html2text('\n'.join(topic.message.splitlines())).strip()])
+            output = '\n=================\n'.join(map(print_topic, display_topics))
+        else:
+            def topic_row(topic):
+                return [topic.id, compact_datetime(topic.posted_at_date), topic.user_name, topic.title]
+            output = tabulate(map(topic_row, display_topics), tablefmt='plain')
+
+        self.outputter.poutput(output)
 
         return False

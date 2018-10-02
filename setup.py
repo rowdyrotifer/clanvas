@@ -7,7 +7,7 @@ setup(
     license='MIT',
     author='Mark Lalor',
     author_email='markwlalor@gmail.com',
-    install_requires=['canvasapi', 'cmd2', 'tabulate', 'colorama', 'pytz', 'tzlocal', 'tree-format'],
+    install_requires=['canvasapi', 'cmd2', 'tabulate', 'tree-format', 'html2text', 'colorama', 'pytz', 'tzlocal'],
     packages=['clanvas'],
     entry_points={'console_scripts': ['clanvas = clanvas.clanvas:main']},
     description='Command-line client for Canvas by Instructure',

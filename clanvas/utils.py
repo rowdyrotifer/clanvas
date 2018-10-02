@@ -16,6 +16,8 @@ def rstrip_zeroes(float_var):
 def compact_datetime(datetime_var):
     return datetime_var.astimezone(get_localzone()).strftime("%m-%d %I:%M%p")
 
+def long_datetime(datetime_var):
+    return datetime_var.astimezone(get_localzone()).strftime("%A, %B %d, %Y %I:%M%p")
 
 def percentage_string(val, digits):
     val *= 10 ** (digits + 2)

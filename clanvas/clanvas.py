@@ -14,7 +14,8 @@ from .filesynchronizer import FileSynchronizer
 from .filters import latest_term_courses
 from .interfaces import *
 from .lister import Lister
-from .outputter import Verbosity
+from .outputter import Verbosity, Outputter
+from .printer import Printer
 from .utils import *
 
 
@@ -27,6 +28,8 @@ class Clanvas(cmd2.Cmd):
 
         super(Clanvas, self).__init__()
 
+        self.setup_shell_tab_completion()
+
         self.url = None
         self.host = None
         self.canvas = None  # type: Canvas
@@ -36,18 +39,26 @@ class Clanvas(cmd2.Cmd):
         self.current_course = None  # type: Course
         self.current_directory = self.home
 
-        general_output_fn = functools.partial(self.poutput, end='')
-        self.file_synchronizer = FileSynchronizer(general_output_fn, self.get_verbosity)
-        self.lister = Lister(general_output_fn, self.get_verbosity)
-        self.completers = Completers(self)
+        self.outputter = Outputter(functools.partial(self.poutput, end=''), self.get_verbosity)
 
-        self.complete_cc = self.completers.course_completer
-        self.complete_wopen = self.completers.wopen_completer
-        self.complete_pullf = self.completers.pullf_completer
+        self.file_synchronizer = FileSynchronizer(self.outputter)
+        self.lister = Lister(self.outputter)
+        self.printer = Printer(self.outputter)
 
-        self.complete_la = self.completers.generic_course_optional_completer
-        self.complete_lg = self.completers.generic_course_optional_completer
-        self.complete_lan = self.completers.generic_course_optional_completer
+        completers = Completers(self)
+
+        self.complete_cc = completers.course_completer
+        self.complete_wopen = completers.wopen_completer
+        self.complete_pullf = completers.pullf_completer
+
+        self.complete_la = completers.generic_course_optional_completer
+        self.complete_lg = completers.generic_course_optional_completer
+        self.complete_lann = completers.generic_course_optional_completer
+
+        self.complete_catann = completers.catann_completer
+
+    def get_caches(self):
+        return self._caches
 
     @blocking_lru
     def get_courses(self, **kwargs):
@@ -62,6 +73,11 @@ class Clanvas(cmd2.Cmd):
     def list_tabs_cached(self, course_id):
         course = self.get_courses()[course_id]
         return sorted(course.list_tabs(), key=lambda tab: tab.position)
+
+    @blocking_lru
+    def list_announcements_cached(self, course_id):
+        course = self.get_courses()[course_id]
+        return sorted(course.get_discussion_topics(only_announcements=True), key=lambda t: t.posted_at_date)
 
     def get_verbosity(self) -> Verbosity:
         return Verbosity[self.verbosity]
@@ -114,6 +130,9 @@ class Clanvas(cmd2.Cmd):
             except Exception as ex:
                 self.poutput('{}'.format(ex))
 
+    def complete_cd (self, text, line, begidx, endidx):
+        return self.path_complete(text, line, begidx, endidx, dir_only=True)
+
     @cmd2.with_argparser(cc_parser)
     def do_cc(self, opts):
         if opts.course is '' or opts.course is '~':
@@ -149,11 +168,15 @@ class Clanvas(cmd2.Cmd):
         else:
             return self.lister.list_grades(**opts_copy)
 
-    @cmd2.with_argparser(lan_parser)
+    @cmd2.with_argparser(lann_parser)
     @argparser_course_optional_wrapper
-    def do_lan(self, opts):
+    def do_lann(self, opts):
         return self.lister.list_announcements(**vars(opts))
 
+    @cmd2.with_argparser(catann_parser)
+    @argparser_course_optional_wrapper
+    def do_catann(self, opts):
+        return self.printer.print_announcement(**vars(opts))
 
     @cmd2.with_argparser(wopen_parser)
     @argparser_course_optional_wrapper
@@ -211,18 +234,15 @@ class Clanvas(cmd2.Cmd):
 
         self.file_synchronizer.pull_all_files(destination_path, opts.course)
 
+    def setup_shell_tab_completion(self):
+        # For specifying tab-completion for default shell commands
+        # TODO: add basically everything from GNU Coreutils http://www.gnu.org/software/coreutils/manual/html_node/index.html
+        # Better TODO: make shell completion default to path_complete
 
-# For specifying tab-completion for default shell commands
-# TODO: add basically everything from GNU Coreutils http://www.gnu.org/software/coreutils/manual/html_node/index.html
-# Better TODO: make shell completion default to
+        completion_map_dir_file = ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 'tail', 'ls']
 
-completion_map_dir_only = ['cd']
-completion_map_dir_file = ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 'tail', 'ls']
-
-for command in completion_map_dir_only:
-    setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.path_complete, dir_only=True))
-for command in completion_map_dir_file:
-    setattr(Clanvas, 'complete_' + command, functools.partialmethod(cmd2.path_complete, dir_only=False))
+        for command in completion_map_dir_file:
+            setattr(self, 'complete_' + command, functools.partialmethod(self.path_complete, dir_only=False))
 
 
 def main():

@@ -5,7 +5,7 @@ from contextlib import redirect_stderr
 import cmd2
 import functools
 
-from .interfaces import wopen_parser, course_query_or_cc
+from .interfaces import wopen_parser, course_query_or_cc, catann_parser
 from .utils import unique_course_code, filter_courses
 
 
@@ -41,6 +41,25 @@ class Completers():
     def course_completer(self, text, line, begidx, endidx):
         return list(map(unique_course_code, filter_courses(self.clanvas.get_courses().values(), line[begidx:endidx])))
 
+    def catann_tab_completer(self, text, line, begidx, endidx):
+        opts = parse_partial(catann_parser, line)
+        if opts is None:
+            return []
+
+        opts.course = course_query_or_cc(self.clanvas, opts.course, fail_on_ambiguous=True, quiet=True)
+
+        if opts.course is None:
+            return []
+
+        announcements = list(opts.course.get_discussion_topics(only_announcements=True))
+
+
+        matched_announcements = list(filter(lambda ann: str(ann.id).startswith(str(opts.id[0])), announcements))
+
+        items = list(map(lambda ann: str(ann.id), matched_announcements))
+
+        return items
+
     def wopen_tab_completer(self, text, line, begidx, endidx):
         opts = parse_partial(wopen_parser, line)
         if opts is None:
@@ -55,15 +74,19 @@ class Completers():
         return list(map(lambda tab: shlex.quote(tab.label.lower()), matched_tabs))
 
     def generic_course_optional_completer(self, text, line, begidx, endidx, default_completer=None):
-        return cmd2.flag_based_complete(text, line, begidx, endidx, flag_dict=self._course_complete_flags,
-                                        default_completer=default_completer)
+        return self.clanvas.flag_based_complete(text, line, begidx, endidx, flag_dict=self._course_complete_flags,
+                                                all_else=default_completer)
+
+    def catann_completer(self, text, line, begidx, endidx):
+        return self.clanvas.flag_based_complete(text, line, begidx, endidx, flag_dict=self._course_complete_flags,
+                                                all_else=self.catann_tab_completer)
 
     def wopen_completer(self, text, line, begidx, endidx):
-        return cmd2.flag_based_complete(text, line, begidx, endidx, flag_dict=self._course_complete_flags,
-                                        default_completer=self.wopen_tab_completer)
+        return self.clanvas.flag_based_complete(text, line, begidx, endidx, flag_dict=self._course_complete_flags,
+                                                all_else=self.wopen_tab_completer)
 
     def pullf_completer(self, text, line, begidx, endidx):
-        output_flags = dict.fromkeys(['-o', '--output'], functools.partial(cmd2.path_complete, dir_only=True))
-        return cmd2.flag_based_complete(text, line, begidx, endidx, flag_dict={
+        output_flags = dict.fromkeys(['-o', '--output'], functools.partial(self.clanvas.path_complete, dir_only=True))
+        return self.clanvas.flag_based_complete(text, line, begidx, endidx, flag_dict={
             **self._course_complete_flags,
             **output_flags})
