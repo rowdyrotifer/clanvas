@@ -22,6 +22,7 @@ from .utils import *
 
 
 class Clanvas(cmd2.Cmd):
+    CLANVAS_CATEGORY = 'Clanvas'
     default_to_shell = True
 
     def __init__(self):
@@ -133,6 +134,7 @@ class Clanvas(cmd2.Cmd):
             except Exception as ex:
                 self.poutput('{}'.format(ex))
 
+    @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(cc_parser)
     def do_cc(self, opts):
         if opts.course is '' or opts.course is '~':
@@ -143,6 +145,7 @@ class Clanvas(cmd2.Cmd):
         if match is not None:
             self.current_course = match
 
+    @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lc_parser)
     def do_lc(self, opts):
         courses = self.get_courses().values()
@@ -150,11 +153,13 @@ class Clanvas(cmd2.Cmd):
         del kwargs['invalidate']
         self.lister.list_courses(courses, **kwargs)
 
+    @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(la_parser)
     @argparser_course_optional_wrapper
     def do_la(self, opts):
         return self.lister.list_assignments(**vars(opts), assignments_provider=self.list_assignments_cached)
 
+    @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lg_parser)
     @argparser_course_optional_wrapper
     def do_lg(self, opts):
@@ -168,16 +173,19 @@ class Clanvas(cmd2.Cmd):
         else:
             return self.lister.list_grades(**opts_copy)
 
+    @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lann_parser)
     @argparser_course_optional_wrapper
     def do_lann(self, opts):
         return self.lister.list_announcements(**vars(opts), announcements_provider=self.list_announcements_cached)
 
+    @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(catann_parser)
     @argparser_course_optional_wrapper
     def do_catann(self, opts):
         return self.printer.print_announcement(**vars(opts))
 
+    @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(ua_parser)
     @argparser_course_optional_wrapper
     def do_ua(self, opts):
@@ -195,6 +203,7 @@ class Clanvas(cmd2.Cmd):
             self.outputter.poutput_debug(f'Course {opts.course.id} has no assignment {opts.id}')
             return False
 
+    @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(wopen_parser)
     @argparser_course_optional_wrapper
     def do_wopen(self, opts):
@@ -215,6 +224,7 @@ class Clanvas(cmd2.Cmd):
 
         return True
 
+    @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(login_parser)
     def do_login(self, opts):
         if self.canvas is not None:
@@ -233,6 +243,7 @@ class Clanvas(cmd2.Cmd):
         else:
             call_eagerly(self.get_courses, self.current_user_profile)
 
+    @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(whoami_parser)
     def do_whoami(self, opts):
         profile = self.canvas.get_current_user().get_profile()
@@ -243,6 +254,7 @@ class Clanvas(cmd2.Cmd):
             verbose_fields = ['name', 'short_name', 'login_id', 'primary_email', 'id', 'time_zone']
             self.poutput('\n'.join([field + ': ' + str(profile[field]) for field in verbose_fields]))
 
+    @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(pullf_parser)
     @argparser_course_optional_wrapper
     def do_pullf(self, opts):
