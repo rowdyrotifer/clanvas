@@ -11,7 +11,7 @@ from canvasapi.assignment import Assignment
 from canvasapi.exceptions import ResourceDoesNotExist
 from colorama import Fore, Style
 
-from .completers import Completers
+from .completers import get_completer_mapping
 from .filesynchronizer import FileSynchronizer
 from .filters import latest_term_courses
 from .interfaces import *
@@ -46,9 +46,10 @@ class Clanvas(cmd2.Cmd):
         self.printer = Printer(self.outputter)
 
         # Clanvas commands
-        completers = Completers(self)
-        for command, completer in completers.completer_mapping.items():
+        command_completers = get_completer_mapping(self)
+        for command, completer in command_completers.items():
             setattr(self, 'complete_' + command, completer)
+
         # GNU commands
         for command in ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 'tail', 'ls']:
             setattr(self, 'complete_' + command, functools.partialmethod(self.path_complete, dir_only=False))

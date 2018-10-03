@@ -3,16 +3,11 @@ import io
 import shlex
 from contextlib import redirect_stderr
 
-from .interfaces import wopen_parser, course_query_or_cc, catann_parser, ua_parser
+from cmd2.argparse_completer import AutoCompleter
+
+from .interfaces import wopen_parser, course_query_or_cc, catann_parser, ua_parser, course_option_parser, pullf_parser, \
+    lg_parser, lann_parser, la_parser, cd_parser, cc_parser
 from .utils import unique_course_code, filter_courses
-
-
-def complete_any(text, line, begidx, endidx, completers):
-    for completer in completers:
-        completions = completer(text, line, begidx, endidx)
-        if completions:
-            return completions
-    return []
 
 
 def parse_partial(argparser, line):
@@ -23,8 +18,7 @@ def parse_partial(argparser, line):
             return opts
     except ValueError as e:
         if str(e) == 'No closing quotation':
-            print(line + '\'')
-            return parse_partial(argparser, line + '\'')
+            return parse_partial(argparser, line + ('"' if line.rfind('"') > line.rfind("'") else "'"))
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -32,81 +26,89 @@ def parse_partial(argparser, line):
     return None
 
 
-class Completers:
-    def __init__(self, clanvas):
-        self.clanvas = clanvas
-        self._course_complete_flags = dict.fromkeys(['-c', '--course'], self._course_completer)
-
-        self.completer_mapping = {
-            'catann': functools.partial(self._course_option_completer, all_else=self._catann_tab_completer),
-            'cc': self._course_completer,
-            'cd': functools.partial(self.clanvas.path_complete, dir_only=True),
-            'la': self._course_option_completer,
-            'lann': self._course_option_completer,
-            'lg': self._course_option_completer,
-            'pullf': self._pullf_tab_completer,
-            'ua': functools.partial(self._course_option_completer, all_else=self._ua_tab_completer),
-            'wopen': functools.partial(self._course_option_completer, all_else=self._wopen_tab_completer)
-        }
-
-    def _course_completer(self, text, line, begidx, endidx):
-        return list(map(unique_course_code, filter_courses(self.clanvas.get_courses().values(), line[begidx:endidx])))
-
-    def _course_option_completer(self, text, line, begidx, endidx, all_else=None):
-        return self.clanvas.flag_based_complete(
-            text, line, begidx, endidx, flag_dict=self._course_complete_flags, all_else=all_else)
-
-    def _catann_tab_completer(self, text, line, begidx, endidx):
-        opts = parse_partial(catann_parser, line[0:endidx])
+def course_required_completer(completer_function):
+    @functools.wraps(completer_function)
+    def call_with_course(text, line, begidx, endidx, clanvas):
+        opts = parse_partial(course_option_parser, line)
         if opts is None:
             return []
 
-        opts.course = course_query_or_cc(self.clanvas, opts.course, fail_on_ambiguous=True, quiet=True)
-        if opts.course is None:
+        course = course_query_or_cc(clanvas, opts.course, fail_on_ambiguous=True, quiet=True)
+        if course is None:
             return []
 
-        matching_string = '' if len(opts.ids) == 0 or line[endidx-1] == ' ' else opts.ids[-1]
+        return completer_function(text, line, begidx, endidx, course, clanvas)
 
-        announcements = [str(ann.id) for ann in self.clanvas.list_announcements_cached(opts.course.id)]
-        matched_announcements = filter(lambda ann: ann.startswith(matching_string), announcements)
+    return call_with_course
 
-        return list(matched_announcements)
 
-    def _wopen_tab_completer(self, text, line, begidx, endidx):
-        opts = parse_partial(wopen_parser, line[0:endidx])
-        if opts is None:
-            return []
+def create_completer(completer_data, cmd2_app):
+    def completer_implementation(text, line, begidx, endidx):
+        if isinstance(completer_data, tuple):
+            parser, choices = completer_data
+            completer = AutoCompleter(parser, cmd2_app=cmd2_app, arg_choices=choices)
+            tokens, _ = cmd2_app.tokens_for_completion(line, begidx, endidx)
+            results = completer.complete_command(tokens, text, line, begidx, endidx)
+            return results
+        else:
+            return completer_data(text, line, begidx, endidx)
 
-        opts.course = course_query_or_cc(self.clanvas, opts.course, fail_on_ambiguous=True, quiet=True)
-        if opts.course is None:
-            return []
+    return completer_implementation
 
-        matching_string = '' if len(opts.tabs) == 0 or line[endidx-1] == ' ' else opts.tabs[-1]
 
-        tabs = self.clanvas.list_tabs_cached(opts.course.id)
-        matched_tabs = filter(lambda tab: tab.label.lower().startswith(matching_string.lower()), tabs)
-        return list(map(lambda tab: shlex.quote(tab.label.lower()), matched_tabs))
+def with_course_optional(clanvas, choices={}):
+    return {'course': (_course_completer,[clanvas]), **choices}
 
-    def _ua_tab_completer(self, text, line, begidx, endidx):
-        opts = parse_partial(ua_parser, line[0:endidx])
-        if opts is None:
-            return []
+def _course_completer(text, line, begidx, endidx, clanvas):
+    return list(map(unique_course_code, filter_courses(clanvas.get_courses().values(), line[begidx:endidx])))
 
-        opts.course = course_query_or_cc(self.clanvas, opts.course, fail_on_ambiguous=True, quiet=True)
-        if opts.course is None:
-            return []
 
-        if (opts.file is None and line[endidx - 1] != ' ') or opts.id is None:
-            # This means they're still typing the first argument since the second is None
-            matching_string = '' if opts.id is None else str(opts.id)
-            course_assignments_ids = [str(assignment.id) for assignment in self.clanvas.list_assignments_cached(opts.course.id)]
-            matched_assignment_ids = filter(lambda assignment_id: assignment_id.startswith(matching_string), course_assignments_ids)
-            return list(matched_assignment_ids)
-        elif opts.file is None:
-            return self.clanvas.path_complete(text, line, begidx, endidx)
+def get_completer_mapping(clanvas):
+    return {key: create_completer(completer_data, clanvas) for key, completer_data in {
+        'catann': (catann_parser, with_course_optional(clanvas, {
+            'ids': (_catann_tab_completer, [clanvas])
+        })),
+        'cc': (cc_parser, {
+            'course': (_course_completer, [clanvas])
+        }),
+        'cd': (cd_parser, with_course_optional(clanvas, {
+            'directory': (clanvas.path_complete, [True])
+        })),
+        'la': (la_parser, with_course_optional(clanvas, {})),
+        'lann': (lann_parser, with_course_optional(clanvas, {})),
+        'lg': (lg_parser, with_course_optional(clanvas, {})),
+        'pullf': (pullf_parser, with_course_optional(clanvas, {
+            'output': (clanvas.path_complete, [True])
+        })),
+        'ua': (ua_parser, with_course_optional(clanvas, {
+            'id': (_assignment_completer, [clanvas]),
+            'file': (clanvas.path_complete,)
+        })),
+        'wopen': (wopen_parser, with_course_optional(clanvas, {
+            'tabs': (_wopen_tab_completer, [clanvas])
+        }))
+        }.items()}
 
-    def _pullf_tab_completer(self, text, line, begidx, endidx):
-        output_flags = dict.fromkeys(['-o', '--output'], functools.partial(self.clanvas.path_complete, dir_only=True))
-        return self.clanvas.flag_based_complete(text, line, begidx, endidx, flag_dict={
-            **self._course_complete_flags,
-            **output_flags})
+
+def startswith_completer(input, iterable, case_sensitive=False):
+    return list(filter(lambda item: (item if case_sensitive else item.lower())
+                       .startswith((input if case_sensitive else input.lower())), iterable))
+
+
+@course_required_completer
+def _assignment_completer(text, line, begidx, endidx, course, clanvas):
+    matching_string = line[begidx:endidx]
+    course_assignments_ids = [str(assignment.id) for assignment in clanvas.list_assignments_cached(course.id)]
+    matched_assignment_ids = filter(lambda assignment_id: assignment_id.startswith(matching_string), course_assignments_ids)
+    return list(matched_assignment_ids)
+
+
+@course_required_completer
+def _catann_tab_completer(text, line, begidx, endidx, course, clanvas):
+    return startswith_completer(line[begidx:endidx], [str(ann.id) for ann in clanvas.list_announcements_cached(course.id)])
+
+
+@course_required_completer
+def _wopen_tab_completer(text, line, begidx, endidx, course, clanvas):
+    # need shlex.quote for spaces?
+    return startswith_completer(line[begidx:endidx], [tab.label for tab in clanvas.list_tabs_cached(course.id)])

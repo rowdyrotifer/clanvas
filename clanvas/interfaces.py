@@ -30,12 +30,15 @@ def argparser_course_optional_wrapper(with_argparser):
     def inject_argparser(self, opts):
         opts.course = course_query_or_cc(self, opts.course)
 
-        with_argparser(self, opts)
+        return with_argparser(self, opts)
 
     return inject_argparser
 
 
 DEFAULT = '__DEFAULT__'
+
+course_option_parser = argparse.ArgumentParser()
+course_option_parser = course_optional(course_option_parser)
 
 cc_parser = argparse.ArgumentParser()
 cc_parser.add_argument('course', nargs='?', default='',
