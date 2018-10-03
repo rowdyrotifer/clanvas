@@ -127,7 +127,7 @@ def blocking_lru(func):
 
 def get_submissions_for_assignments(course: Course, assignments):
     assignment_ids = [assignment.id for assignment in assignments]
-    assignment_submissions = course.list_multiple_submissions(assignment_ids=assignment_ids)
+    assignment_submissions = course.get_multiple_submissions(assignment_ids=assignment_ids)
 
     submissions_by_assignment = defaultdict(list)
 

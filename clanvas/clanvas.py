@@ -71,7 +71,7 @@ class Clanvas(cmd2.Cmd):
     @blocking_lru
     def list_tabs_cached(self, course_id):
         course = self.get_courses()[course_id]
-        return sorted(course.list_tabs(), key=lambda tab: tab.position)
+        return sorted(course.get_tabs(), key=lambda tab: tab.position)
 
     @blocking_lru
     def list_announcements_cached(self, course_id):
@@ -221,8 +221,6 @@ class Clanvas(cmd2.Cmd):
 
         for tab in matched_tabs:
             webbrowser.open(tab.full_url, new=2)
-
-        return True
 
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(login_parser)

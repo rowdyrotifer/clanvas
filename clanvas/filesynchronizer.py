@@ -20,8 +20,8 @@ class FileTree(Generic[T]):
 
 
 def build_canvas_file_tree(base, folder: Folder) -> FileTree[File]:
-    folders = list(map(lambda subfolder: build_canvas_file_tree(join(base, subfolder.name), subfolder), folder.list_folders()))
-    files = list(folder.list_files())
+    folders = list(map(lambda subfolder: build_canvas_file_tree(join(base, subfolder.name), subfolder), folder.get_folders()))
+    files = list(folder.get_files())
     return FileTree(base, folders, files)
 
 
@@ -50,7 +50,7 @@ class FileSynchronizer:
             self.pull_file_tree(directory, subtree)
 
     def pull_all_files(self, directory, course: Course):
-        top_level_folder = next(folder for folder in course.list_folders() if folder.parent_folder_id is None)
+        top_level_folder = next(folder for folder in course.get_folders() if folder.parent_folder_id is None)
         try:
             tree = build_canvas_file_tree('.', top_level_folder)
             self.outputter.poutput_verbose('Detected ' + str(length_file_tree(tree)) + ' files.')

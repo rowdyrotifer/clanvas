@@ -54,7 +54,7 @@ class Lister:
         if long:
             if submissions:
                 assignment_ids = map(lambda assignment: assignment.id, assignments)
-                assignment_submissions = course.list_multiple_submissions(assignment_ids=assignment_ids)
+                assignment_submissions = course.get_multiple_submissions(assignment_ids=assignment_ids)
 
                 submissions_by_assignment = defaultdict(list)
 
@@ -132,7 +132,7 @@ class Lister:
         graded_assignment_submissions = {assignment: graded_submission(assignment) for assignment in assignment_submission_pair}
 
         tree_items = []
-        assignment_groups = course.list_assignment_groups()
+        assignment_groups = course.get_assignment_groups()
 
         grouped_assignment_submission_pairs = {}
         for assignment, submission in graded_assignment_submissions.items():
