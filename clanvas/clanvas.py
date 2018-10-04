@@ -7,16 +7,12 @@ from urllib.parse import urlparse
 import cmd2
 import colorama
 from canvasapi import Canvas
-from canvasapi.assignment import Assignment
-from canvasapi.exceptions import ResourceDoesNotExist
-from colorama import Fore, Style
 
+from .lister import *
+from .filesynchronizer import pull_all_files
 from .completion import get_completer_mapping
-from .filesynchronizer import FileSynchronizer
 from .interfaces import *
-from .lister import Lister
-from .outputter import Verbosity, Outputter
-from .printer import Printer
+from .outputter import Verbosity, bind_outputter, get_outputter
 from .utils import *
 
 
@@ -39,11 +35,7 @@ class Clanvas(cmd2.Cmd):
         self.current_course = None  # type: Course
         self.current_directory = self.home
 
-        self.outputter = Outputter(functools.partial(self.poutput, end=''), self.get_verbosity)
-
-        self.file_synchronizer = FileSynchronizer(self.outputter)
-        self.lister = Lister(self.outputter)
-        self.printer = Printer(self.outputter)
+        bind_outputter(functools.partial(self.poutput, end=''), self.get_verbosity)
 
         # Clanvas commands
         command_completers = get_completer_mapping(self)
@@ -147,31 +139,31 @@ class Clanvas(cmd2.Cmd):
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lc_parser)
     def do_lc(self, opts):
-        self.lister.list_courses(self.get_courses().values(), **vars(opts))
+        list_courses(self.get_courses().values(), **vars(opts))
 
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(la_parser)
     @argparser_course_required_wrapper
     def do_la(self, course, opts):
-        return self.lister.list_assignments(course, self.list_assignments_cached, **vars(opts))
+        return list_assignments(course, self.list_assignments_cached, **vars(opts))
 
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lg_parser)
     @argparser_course_required_wrapper
     def do_lg(self, course, opts):
-        return self.lister.list_grades(course, **vars(opts))
+        return list_grades(course, **vars(opts))
 
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lann_parser)
     @argparser_course_required_wrapper
     def do_lann(self, course: Course, opts):
-        return self.lister.list_announcements(self.list_announcements_cached(course.id), **vars(opts))
+        return list_announcements(self.list_announcements_cached(course.id), **vars(opts))
 
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(catann_parser)
     @argparser_course_required_wrapper
     def do_catann(self, course: Course, opts):
-        return self.printer.print_announcement(course, opts.ids)
+        return list_announcement(course, opts.ids)
 
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(ua_parser)
@@ -179,14 +171,14 @@ class Clanvas(cmd2.Cmd):
     def do_ua(self, course: Course, opts):
         try:
             assignment: Assignment = course.get_assignment(opts.id)
-            self.outputter.poutput(f'Uploading submission for "{assignment.name}"')
+            get_outputter().poutput(f'Uploading submission for "{assignment.name}"')
             assignment.submit({'submission_type': 'online_upload'}, opts.file)
-            self.outputter.poutput(f'Uploaded {opts.file}')
-            self.outputter.poutput(f'To {assignment.html_url}')
+            get_outputter().poutput(f'Uploaded {opts.file}')
+            get_outputter().poutput(f'To {assignment.html_url}')
 
         except ResourceDoesNotExist as e:
-            self.outputter.poutput('Invalid assignment ID.')
-            self.outputter.poutput_debug(f'Course {opts.course.id} has no assignment {opts.id}')
+            get_outputter().poutput('Invalid assignment ID.')
+            get_outputter().poutput_debug(f'Course {opts.course.id} has no assignment {opts.id}')
 
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(wopen_parser)
@@ -241,7 +233,7 @@ class Clanvas(cmd2.Cmd):
         destination_path = join(
             *[os.path.expanduser('~'), 'canvas', 'courses', code, 'files']) if opts.output is None else opts.output
 
-        self.file_synchronizer.pull_all_files(destination_path, opts.course)
+        pull_all_files(destination_path, opts.course)
 
 
 def main():

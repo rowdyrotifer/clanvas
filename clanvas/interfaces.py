@@ -1,6 +1,7 @@
 import argparse
 import functools
 
+from .outputter import get_outputter
 from .utils import get_course_by_query
 
 
@@ -30,8 +31,8 @@ def argparser_course_required_wrapper(with_argparser):
     def inject_argparser(self, opts):
         course = course_query_or_cc(self, opts.course)
         if course is None:
-            self.outputter.poutput('Please specify a course to use this command.')
-            self.outputter.poutput_verbose('Use the cc command or the -c option.')
+            get_outputter().poutput('Please specify a course to use this command.')
+            get_outputter().poutput_verbose('Use the cc command or the -c option.')
             return False
         else:
             delattr(opts, 'course')
@@ -88,8 +89,8 @@ pullf_parser.add_argument('-o', '--output', help='location to save course files'
 
 ua_parser = argparse.ArgumentParser(description='Upload a submission to an assignment')
 ua_parser = course_optional(ua_parser)
-ua_parser.add_argument('id', type=int, nargs='?', default=None, help='id of assignment to upload a submission to')
-ua_parser.add_argument('file', nargs='?', default=None, help='file to submit')
+ua_parser.add_argument('id', type=int, help='id of assignment to upload a submission to')
+ua_parser.add_argument('file', default=None, help='file to submit')
 
 whoami_parser = argparse.ArgumentParser()
 whoami_parser.add_argument('-v', '--verbose', action='store_true',

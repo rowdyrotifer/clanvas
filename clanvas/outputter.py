@@ -28,3 +28,27 @@ class Outputter:
 
     def poutput_debug(self, msg, end='\n'):
         self.poutput(msg, end, verbosity=Verbosity.DEBUG)
+
+
+outputter: Outputter
+
+
+def get_outputter():
+    """
+    Gets the singleton outputter, which is set on instantiation
+    of the Clanvas object.
+    :return: the outputter instance that is associated the Clanvas object.
+    """
+    global outputter
+    return outputter
+
+
+def bind_outputter(printfn, verbosityfn):
+    """
+    Sets the global outputter variable accessible from get_outputter.
+    :param printfn: a function that accepts a string to print out to user.
+    :param verbosityfn: a function that provides a verbosity level.
+    :return: None
+    """
+    global outputter
+    outputter = Outputter(printfn, verbosityfn)

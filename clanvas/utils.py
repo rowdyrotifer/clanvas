@@ -8,6 +8,8 @@ from canvasapi.course import Course
 from tabulate import tabulate
 from tzlocal import get_localzone
 
+from .outputter import get_outputter
+
 
 def rstrip_zeroes(float_var):
     return ('%f' % float_var).rstrip('0').rstrip('.')
@@ -68,19 +70,19 @@ def get_course_by_query(clanvas, query, fail_on_ambiguous=False, quiet=False):
         return matched_courses[0]
     elif num_matches > 1 and not fail_on_ambiguous:
         if not quiet:
-            clanvas.poutput('Ambiguous course input "{:s}".'.format(query))
+            get_outputter().poutput('Ambiguous course input "{:s}".'.format(query))
         if not quiet:
-            clanvas.poutput('Please select an option:')
+            get_outputter().poutput('Please select an option:')
 
         pad_length = len(str(num_matches)) + 2
         format_str = '{:<' + str(pad_length) + '}{}'
 
         if not quiet:
-            clanvas.poutput(format_str.format('0)', 'cancel'))
+            get_outputter().poutput(format_str.format('0)', 'cancel'))
         count = 1
         for course in matched_courses:
             if not quiet:
-                clanvas.poutput(format_str.format(f'{count})', unique_course_code(course)))
+                get_outputter().poutput(format_str.format(f'{count})', unique_course_code(course)))
             count += 1
 
         choice = input('Enter number: ')
@@ -88,15 +90,15 @@ def get_course_by_query(clanvas, query, fail_on_ambiguous=False, quiet=False):
             num_choice = int(choice)
             if num_choice > num_matches:
                 if not quiet:
-                    clanvas.poutput(f'Choice {num_choice} greater than last choice ({num_matches}).')
+                    get_outputter().poutput(f'Choice {num_choice} greater than last choice ({num_matches}).')
             elif num_choice != 0:
                 return matched_courses[num_choice - 1]
         else:
             if not quiet:
-                clanvas.poutput(f'Choice {choice} is not numeric.')
+                get_outputter().poutput(f'Choice {choice} is not numeric.')
     else:
         if not quiet:
-            clanvas.poutput('Could not find a matching course.'
+            get_outputter().poutput('Could not find a matching course.'
                             if not fail_on_ambiguous else 'Ambiguous course query string.')
 
     return None

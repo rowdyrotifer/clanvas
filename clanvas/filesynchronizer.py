@@ -7,6 +7,7 @@ from canvasapi.exceptions import Unauthorized
 from canvasapi.file import File
 from canvasapi.folder import Folder
 
+from .outputter import get_outputter
 from .utils import *
 
 T = TypeVar('T')
@@ -29,33 +30,28 @@ def length_file_tree(folder: FileTree) -> int:
     return sum(map(length_file_tree, folder.folders)) + len(folder.files)
 
 
-class FileSynchronizer:
-    def __init__(self, outputter):
-        self.outputter = outputter
+def pull_file_tree(directory, tree):
+    pathlib.Path(join(directory, tree.path)).mkdir(parents=True, exist_ok=True)
 
-    def pull_file_tree(self, directory, tree):
-        pathlib.Path(join(directory, tree.path)).mkdir(parents=True, exist_ok=True)
+    for file in tree.files:
+        file_path = join(join(directory, tree.path), file.filename)
 
-        for file in tree.files:
-            filepath = join(join(directory, tree.path), file.filename)
+        canvas_mtime = unix_time_seconds(file.modified_at_date.replace(tzinfo=pytz.utc))
 
-            canvas_mtime = unix_time_seconds(file.modified_at_date.replace(tzinfo=pytz.utc))
+        if not os.path.exists(file_path) or canvas_mtime > os.stat(file_path).st_mtime:
+            file.download(file_path)
+            atime = os.stat(file_path).st_atime
+            os.utime(file_path, (atime, canvas_mtime))
 
-            if not os.path.exists(filepath) or canvas_mtime > os.stat(filepath).st_mtime:
-                file.download(filepath)
-                atime = os.stat(filepath).st_atime
-                os.utime(filepath, (atime, canvas_mtime))
-
-        for subtree in tree.folders:
-            self.pull_file_tree(directory, subtree)
-
-    def pull_all_files(self, directory, course: Course):
-        top_level_folder = next(folder for folder in course.get_folders() if folder.parent_folder_id is None)
-        try:
-            tree = build_canvas_file_tree('.', top_level_folder)
-            self.outputter.poutput_verbose('Detected ' + str(length_file_tree(tree)) + ' files.')
-            self.pull_file_tree(directory, tree)
-        except Unauthorized:
-            self.outputter.poutput('Not authorized to access this course\'s files')
+    for subtree in tree.folders:
+        pull_file_tree(directory, subtree)
 
 
+def pull_all_files(directory, course: Course):
+    top_level_folder = next(folder for folder in course.get_folders() if folder.parent_folder_id is None)
+    try:
+        tree = build_canvas_file_tree('.', top_level_folder)
+        get_outputter().poutput_verbose('Detected ' + str(length_file_tree(tree)) + ' files.')
+        pull_file_tree(directory, tree)
+    except Unauthorized:
+        get_outputter().poutput('Not authorized to access this course\'s files')
