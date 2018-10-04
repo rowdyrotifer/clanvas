@@ -46,7 +46,7 @@ def submission_info_items(s):
 
 def filter_courses(courses, query):
     query_processed = query.replace(' ', '').lower()
-    return filter(lambda course: query_processed in unique_course_code(course).replace(' ', '').lower(), courses)
+    return filter(lambda course: query_processed in unique_course_code(course).lower(), courses)
 
 
 def tabulate_dict(item_to_list, items):

@@ -59,6 +59,7 @@ def create_completer(completer_data, cmd2_app):
 def with_course_optional(clanvas, choices={}):
     return {'course': (_course_completer,[clanvas]), **choices}
 
+
 def _course_completer(text, line, begidx, endidx, clanvas):
     return list(map(unique_course_code, filter_courses(clanvas.get_courses().values(), line[begidx:endidx])))
 
@@ -90,6 +91,8 @@ def get_completer_mapping(clanvas):
         }.items()}
 
 
+# TODO: radix tree for more CPU efficiency at the cost of memory efficiency?
+
 def startswith_completer(input, iterable, case_sensitive=False):
     return list(filter(lambda item: (item if case_sensitive else item.lower())
                        .startswith((input if case_sensitive else input.lower())), iterable))
@@ -97,18 +100,17 @@ def startswith_completer(input, iterable, case_sensitive=False):
 
 @course_required_completer
 def _assignment_completer(text, line, begidx, endidx, course, clanvas):
-    matching_string = line[begidx:endidx]
-    course_assignments_ids = [str(assignment.id) for assignment in clanvas.list_assignments_cached(course.id)]
-    matched_assignment_ids = filter(lambda assignment_id: assignment_id.startswith(matching_string), course_assignments_ids)
-    return list(matched_assignment_ids)
+    return startswith_completer(line[begidx:endidx],
+                                [str(assignment.id) for assignment in clanvas.list_assignments_cached(course.id)])
 
 
 @course_required_completer
 def _catann_tab_completer(text, line, begidx, endidx, course, clanvas):
-    return startswith_completer(line[begidx:endidx], [str(ann.id) for ann in clanvas.list_announcements_cached(course.id)])
+    return startswith_completer(line[begidx:endidx],
+                                [str(ann.id) for ann in clanvas.list_announcements_cached(course.id)])
 
 
 @course_required_completer
 def _wopen_tab_completer(text, line, begidx, endidx, course, clanvas):
-    # need shlex.quote for spaces?
-    return startswith_completer(line[begidx:endidx], [tab.label for tab in clanvas.list_tabs_cached(course.id)])
+    return startswith_completer(line[begidx:endidx],
+                                [tab.label for tab in clanvas.list_tabs_cached(course.id)])
