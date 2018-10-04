@@ -98,18 +98,19 @@ In the Clanvas shell, all commands already on your system `PATH` are available.
 
 In addition, the shell provides the following commands:
 
-|  Command  | Meaning               |
-|-----------|-----------------------|
-| lc        | list classes          |
-| cc        | change current class  |
-| la        | list assignments      |
-| lg        | list grades           |
-| lann      | list announcements    |
-| catann    | print announcements   |
-| pullf     | pull files            |
-| wopen     | open in web interface |
-| whoami    | show login info       |
-| quit      | quit the shell        |
+|  Command  | Meaning                         |
+|-----------|---------------------------------|
+| lc        | list classes                    |
+| cc        | change current class            |
+| la        | list assignments                |
+| lg        | list grades                     |
+| lann      | list announcements              |
+| catann    | print announcements             |
+| pullf     | pull files                      |
+| ua        | upload submission to assignment |
+| wopen     | open in web interface           |
+| whoami    | show login info                 |
+| quit      | quit the shell                  |
 
 Type `help` to see all commands, and use the `-h` flag to show usage details for any particular command.
 
