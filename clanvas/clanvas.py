@@ -8,11 +8,11 @@ import cmd2
 import colorama
 from canvasapi import Canvas
 
-from .lister import *
-from .filesynchronizer import pull_all_files
 from .completion import get_completer_mapping
+from .filesynchronizer import pull_all_files
 from .interfaces import *
-from .outputter import Verbosity, bind_outputter, get_outputter
+from .lister import *
+from .outputter import Verbosity, bind_outputter
 from .utils import *
 
 
@@ -87,6 +87,25 @@ class Clanvas(cmd2.Cmd):
     # cmd2 attribute that determines the prompt format
     prompt = property(lambda self: self.get_prompt())
 
+    @cmd2.with_category(CLANVAS_CATEGORY)
+    @cmd2.with_argparser(login_parser)
+    def do_login(self, opts):
+        if self.canvas is not None:
+            get_outputter().poutput('Already logged in.')
+            return False
+
+        self.url = opts.url
+        self.host = urlparse(opts.url).netloc
+
+        self.canvas = Canvas(opts.url, opts.token)
+
+        if not opts.quiet:
+            profile = self.current_user_profile()
+            get_outputter().poutput('Logged in as {:s} ({:s})'.format(profile['name'], profile['login_id']))
+            call_eagerly(self.get_courses)
+        else:
+            call_eagerly(self.get_courses, self.current_user_profile)
+
     def get_prompt(self):
         if self.canvas is None:
             return '$ '
@@ -98,16 +117,6 @@ class Clanvas(cmd2.Cmd):
             pwd=os.getcwd().replace(self.home, '~')
         )
 
-    #     _____                                          _
-    #    / ____|                                        | |
-    #   | |     ___  _ __ ___  _ __ ___   __ _ _ __   __| |___
-    #   | |    / _ \| '_ ` _ \| '_ ` _ \ / _` | '_ \ / _` / __|
-    #   | |___| (_) | | | | | | | | | | | (_| | | | | (_| \__ \
-    #    \_____\___/|_| |_| |_|_| |_| |_|\__,_|_| |_|\__,_|___/
-    #
-
-    # Reimplement POSIX cd to call os.chdir
-
     @cmd2.with_argparser(cd_parser)
     def do_cd(self, opts):
         if opts.directory == '':
@@ -116,15 +125,16 @@ class Clanvas(cmd2.Cmd):
             path = os.path.abspath(os.path.expanduser(opts.directory))
 
         if not os.path.isdir(path):
-            self.poutput(f'cd: no such file or directory: {path}')
+            get_outputter().poutput(f'cd: no such file or directory: {path}')
         elif not os.access(path, os.R_OK):
-            self.poutput(f'cd: permission denied: {path}')
+            get_outputter().poutput(f'cd: permission denied: {path}')
         else:
             try:
                 os.chdir(path)
             except Exception as ex:
-                self.poutput('{}'.format(ex))
+                get_outputter().poutput('{}'.format(ex))
 
+    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(cc_parser)
     def do_cc(self, opts):
@@ -136,35 +146,41 @@ class Clanvas(cmd2.Cmd):
         if match is not None:
             self.current_course = match
 
+    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lc_parser)
     def do_lc(self, opts):
         list_courses(self.get_courses().values(), **vars(opts))
 
+    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(la_parser)
     @argparser_course_required_wrapper
     def do_la(self, course, opts):
         return list_assignments(course, self.list_assignments_cached, **vars(opts))
 
+    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lg_parser)
     @argparser_course_required_wrapper
     def do_lg(self, course, opts):
         return list_grades(course, **vars(opts))
 
+    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lann_parser)
     @argparser_course_required_wrapper
     def do_lann(self, course: Course, opts):
         return list_announcements(self.list_announcements_cached(course.id), **vars(opts))
 
+    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(catann_parser)
     @argparser_course_required_wrapper
     def do_catann(self, course: Course, opts):
         return list_announcement(course, opts.ids)
 
+    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(ua_parser)
     @argparser_course_required_wrapper
@@ -180,6 +196,7 @@ class Clanvas(cmd2.Cmd):
             get_outputter().poutput('Invalid assignment ID.')
             get_outputter().poutput_debug(f'Course {opts.course.id} has no assignment {opts.id}')
 
+    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(wopen_parser)
     @argparser_course_required_wrapper
@@ -189,42 +206,25 @@ class Clanvas(cmd2.Cmd):
 
         matched_tabs = filter(lambda course_tab: course_tab.label.lower() in given_tabs_set, course_tabs)
         if not matched_tabs:
-            self.poutput(f'No tab found matching "{tab}"')
+            get_outputter().poutput(f'No tab found matching "{tab}"')
             return False
 
         for tab in matched_tabs:
             webbrowser.open(tab.full_url, new=2)
 
-    @cmd2.with_category(CLANVAS_CATEGORY)
-    @cmd2.with_argparser(login_parser)
-    def do_login(self, opts):
-        if self.canvas is not None:
-            self.poutput('Already logged in.')
-            return False
-
-        self.url = opts.url
-        self.host = urlparse(opts.url).netloc
-
-        self.canvas = Canvas(opts.url, opts.token)
-
-        if not opts.quiet:
-            profile = self.current_user_profile()
-            self.poutput('Logged in as {:s} ({:s})'.format(profile['name'], profile['login_id']))
-            call_eagerly(self.get_courses)
-        else:
-            call_eagerly(self.get_courses, self.current_user_profile)
-
+    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(whoami_parser)
     def do_whoami(self, opts):
         profile = self.canvas.get_current_user().get_profile()
 
         if not opts.verbose:
-            self.poutput(profile['name'] + ' (' + profile['login_id'] + ')')
+            get_outputter().poutput(profile['name'] + ' (' + profile['login_id'] + ')')
         else:
             verbose_fields = ['name', 'short_name', 'login_id', 'primary_email', 'id', 'time_zone']
-            self.poutput('\n'.join([field + ': ' + str(profile[field]) for field in verbose_fields]))
+            get_outputter().poutput('\n'.join([field + ': ' + str(profile[field]) for field in verbose_fields]))
 
+    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(pullf_parser)
     @argparser_course_required_wrapper

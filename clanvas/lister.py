@@ -8,7 +8,6 @@ from colorama import Fore, Style, Back
 from html2text import html2text
 from tree_format import format_tree
 
-from .outputter import get_outputter
 from .utils import *
 
 

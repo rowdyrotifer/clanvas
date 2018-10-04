@@ -33,7 +33,7 @@ class Outputter:
 outputter: Outputter
 
 
-def get_outputter():
+def get_outputter() -> Outputter:
     """
     Gets the singleton outputter, which is set on instantiation
     of the Clanvas object.

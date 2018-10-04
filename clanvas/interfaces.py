@@ -28,7 +28,7 @@ def argparser_course_required_wrapper(with_argparser):
     :return:
     """
     @functools.wraps(with_argparser)
-    def inject_argparser(self, opts):
+    def inject_argparser(self, opts, *args, **kwargs):
         course = course_query_or_cc(self, opts.course)
         if course is None:
             get_outputter().poutput('Please specify a course to use this command.')
@@ -36,7 +36,18 @@ def argparser_course_required_wrapper(with_argparser):
             return False
         else:
             delattr(opts, 'course')
-            return with_argparser(self, course, opts)
+            return with_argparser(self, course, opts, *args, **kwargs)
+
+    return inject_argparser
+
+
+def login_required_wrapper(command_func):
+    @functools.wraps(command_func)
+    def inject_argparser(self, *args, **kwargs):
+        if self.canvas is None:
+            get_outputter().poutput('This command requires login. See "login -h"')
+            return False
+        return command_func(self, *args, **kwargs)
 
     return inject_argparser
 
