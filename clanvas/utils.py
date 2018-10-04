@@ -1,7 +1,7 @@
-import datetime
 import functools
 import threading
 from collections import defaultdict
+from datetime import datetime, timedelta
 
 import pytz
 from canvasapi.course import Course
@@ -53,7 +53,7 @@ def tabulate_dict(item_to_list, items):
     return dict(zip(items, tabulate(map(item_to_list, items), tablefmt='plain').split('\n')))
 
 
-epoch = datetime.datetime.utcfromtimestamp(0).replace(tzinfo=pytz.utc)
+epoch = datetime.utcfromtimestamp(0).replace(tzinfo=pytz.utc)
 
 
 def unix_time_seconds(dt):
@@ -135,3 +135,18 @@ def get_submissions_for_assignments(course: Course, assignments):
         submissions_by_assignment[submission.assignment_id].append(submission)
 
     return submissions_by_assignment
+
+
+def filter_days_from_today(iterable, days, key):
+    target = pytz.UTC.localize(datetime.now() - timedelta(days=days))
+    return filter(lambda item: key(item) >= target, iterable)
+
+
+def filter_future_assignments(assignments):
+    now = pytz.UTC.localize(datetime.now())
+    return filter(lambda assignment: assignment.due_at_date >= now, assignments)
+
+
+def filter_latest_term_courses(courses):
+    latest_term_int = max(course.enrollment_term_id for course in courses)
+    return filter(lambda course: course.enrollment_term_id == latest_term_int, courses)

@@ -18,7 +18,7 @@ def course_optional(argparser):
     return argparser
 
 
-def argparser_course_optional_wrapper(with_argparser):
+def argparser_course_required_wrapper(with_argparser):
     """
     When applied to a do_x function in the Clanvas class that takes in argparser opts,
     will convert/replace course attribute with a corresponding course object either
@@ -28,9 +28,14 @@ def argparser_course_optional_wrapper(with_argparser):
     """
     @functools.wraps(with_argparser)
     def inject_argparser(self, opts):
-        opts.course = course_query_or_cc(self, opts.course)
-
-        return with_argparser(self, opts)
+        course = course_query_or_cc(self, opts.course)
+        if course is None:
+            self.outputter.poutput('Please specify a course to use this command.')
+            self.outputter.poutput_verbose('Use the cc command or the -c option.')
+            return False
+        else:
+            delattr(opts, 'course')
+            return with_argparser(self, course, opts)
 
     return inject_argparser
 
@@ -51,7 +56,6 @@ cd_parser.add_argument('directory', nargs='?', default='',
 lc_parser = argparse.ArgumentParser(description='List courses.')
 lc_parser.add_argument('-a', '--all', action='store_true', help='all courses (previous terms)')
 lc_parser.add_argument('-l', '--long', action='store_true', help='long listing')
-lc_parser.add_argument('-i', '--invalidate', action='store_true', help='invalidate cached course info')
 
 la_parser = argparse.ArgumentParser(description='List course assignments.')
 la_parser = course_optional(la_parser)
@@ -71,8 +75,7 @@ catann_parser.add_argument('ids', nargs='*', help='ids of announcements to print
 lg_parser = argparse.ArgumentParser(description='List course grades.')
 lg_parser = course_optional(lg_parser)
 lg_parser.add_argument('-l', '--long', action='store_true', help='long listing')
-lg_parser.add_argument('-u', '--ungraded', action='store_false', help='include ungraded assignments')
-lg_parser.add_argument('-a', '--all', action='store_true', help='show grades for all courses (previous terms) if no course is specified')
+lg_parser.add_argument('-u', '--hide-ungraded', action='store_true', help='hide ungraded assignments')
 
 login_parser = argparse.ArgumentParser(description='Set URL and token to use for all Canvas API calls')
 login_parser.add_argument('url', help='URL of Canvas server')

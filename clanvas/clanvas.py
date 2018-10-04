@@ -11,9 +11,8 @@ from canvasapi.assignment import Assignment
 from canvasapi.exceptions import ResourceDoesNotExist
 from colorama import Fore, Style
 
-from .completers import get_completer_mapping
+from .completion import get_completer_mapping
 from .filesynchronizer import FileSynchronizer
-from .filters import latest_term_courses
 from .interfaces import *
 from .lister import Lister
 from .outputter import Verbosity, Outputter
@@ -137,7 +136,7 @@ class Clanvas(cmd2.Cmd):
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(cc_parser)
     def do_cc(self, opts):
-        if opts.course is '' or opts.course is '~':
+        if opts.course == '' or opts.course == '~':
             self.current_course = None
             return False
 
@@ -148,70 +147,52 @@ class Clanvas(cmd2.Cmd):
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lc_parser)
     def do_lc(self, opts):
-        courses = self.get_courses().values()
-        kwargs = dict(vars(opts))
-        del kwargs['invalidate']
-        self.lister.list_courses(courses, **kwargs)
+        self.lister.list_courses(self.get_courses().values(), **vars(opts))
 
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(la_parser)
-    @argparser_course_optional_wrapper
-    def do_la(self, opts):
-        return self.lister.list_assignments(**vars(opts), assignments_provider=self.list_assignments_cached)
+    @argparser_course_required_wrapper
+    def do_la(self, course, opts):
+        return self.lister.list_assignments(course, self.list_assignments_cached, **vars(opts))
 
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lg_parser)
-    @argparser_course_optional_wrapper
-    def do_lg(self, opts):
-        opts_copy = dict(vars(opts))
-        del opts_copy['all']
-        if opts.course is None:
-            del opts_copy['course']
-            courses = self.get_courses().values() if opts.all else latest_term_courses(self.get_courses().values())
-            for course in courses:
-                self.lister.list_grades(course, **opts_copy)
-        else:
-            return self.lister.list_grades(**opts_copy)
+    @argparser_course_required_wrapper
+    def do_lg(self, course, opts):
+        return self.lister.list_grades(course, **vars(opts))
 
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lann_parser)
-    @argparser_course_optional_wrapper
-    def do_lann(self, opts):
-        return self.lister.list_announcements(**vars(opts), announcements_provider=self.list_announcements_cached)
+    @argparser_course_required_wrapper
+    def do_lann(self, course: Course, opts):
+        return self.lister.list_announcements(self.list_announcements_cached(course.id), **vars(opts))
 
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(catann_parser)
-    @argparser_course_optional_wrapper
-    def do_catann(self, opts):
-        return self.printer.print_announcement(**vars(opts))
+    @argparser_course_required_wrapper
+    def do_catann(self, course: Course, opts):
+        return self.printer.print_announcement(course, opts.ids)
 
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(ua_parser)
-    @argparser_course_optional_wrapper
-    def do_ua(self, opts):
-        if opts.course is None:
-            self.outputter.poutput('No course specified.')
-            return False
-
-        selected_course = opts.course # type: Course
+    @argparser_course_required_wrapper
+    def do_ua(self, course: Course, opts):
         try:
-            assignment: Assignment = selected_course.get_assignment(opts.id)
+            assignment: Assignment = course.get_assignment(opts.id)
+            self.outputter.poutput(f'Uploading submission for "{assignment.name}"')
             assignment.submit({'submission_type': 'online_upload'}, opts.file)
-            self.outputter.poutput(f'Uploaded {opts.file} to {assignment.id} ({assignment.name})')
+            self.outputter.poutput(f'Uploaded {opts.file}')
+            self.outputter.poutput(f'To {assignment.html_url}')
+
         except ResourceDoesNotExist as e:
             self.outputter.poutput('Invalid assignment ID.')
             self.outputter.poutput_debug(f'Course {opts.course.id} has no assignment {opts.id}')
-            return False
 
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(wopen_parser)
-    @argparser_course_optional_wrapper
-    def do_wopen(self, opts):
-        if opts.course is None:
-            self.poutput('No course specified.')
-            return False
-
-        course_tabs = self.list_tabs_cached(opts.course.id)
+    @argparser_course_required_wrapper
+    def do_wopen(self, course: Course, opts):
+        course_tabs = self.list_tabs_cached(course.id)
         given_tabs_set = frozenset([tab.lower() for tab in opts.tabs])
 
         matched_tabs = filter(lambda course_tab: course_tab.label.lower() in given_tabs_set, course_tabs)
@@ -254,13 +235,9 @@ class Clanvas(cmd2.Cmd):
 
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(pullf_parser)
-    @argparser_course_optional_wrapper
-    def do_pullf(self, opts):
-        if opts.course is None:
-            self.poutput('No course specified.')
-            return False
-
-        code = unique_course_code(opts.course)
+    @argparser_course_required_wrapper
+    def do_pullf(self, course, opts):
+        code = unique_course_code(course)
         destination_path = join(
             *[os.path.expanduser('~'), 'canvas', 'courses', code, 'files']) if opts.output is None else opts.output
 

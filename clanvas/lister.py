@@ -8,7 +8,6 @@ from colorama import Fore, Style, Back
 from html2text import html2text
 from tree_format import format_tree
 
-from .filters import latest_term_courses, future_assignments, days_from_today
 from .utils import *
 
 
@@ -31,7 +30,7 @@ class Lister:
         self.outputter = outputter
 
     def list_courses(self, courses, all=False, long=False):
-        display_courses = courses if all else latest_term_courses(courses)
+        display_courses = courses if all else filter_latest_term_courses(courses)
 
         if long:
             def course_info_items(c):
@@ -42,14 +41,10 @@ class Lister:
             self.outputter.poutput('\n'.join([unique_course_code(c) for c in display_courses]))
 
     def list_assignments(self, course: Course, assignments_provider, long=False, submissions=False, upcoming=False):
-        if course is None:
-            self.outputter.poutput('No course specified.')
-            return False
-
         assignments = assignments_provider(course.id)
 
         if upcoming:
-            assignments = future_assignments(assignments)
+            assignments = filter_future_assignments(assignments)
 
         if long:
             if submissions:
@@ -148,11 +143,7 @@ class Lister:
 
         return course, tree_items
 
-    def list_grades(self, course: Course, long=False, ungraded=True):
-        if course is None:
-            self.outputter.poutput('No course specified.')
-            return False
-
+    def list_grades(self, course: Course, long=False, hide_ungraded=False):
         try:
             tree = Lister.grades_tree(course)
 
@@ -206,7 +197,7 @@ class Lister:
                 if isinstance(node[1], Submission) or node[1] is None:
                     return []
                 else:
-                    return list(filter(lambda item: ungraded or item[1] is not None, node[1]))
+                    return list(filter(lambda item: not hide_ungraded or item[1] is not None, node[1]))
 
             self.outputter.poutput(format_tree(tree, format_node=format_node, get_children=get_children), end='')
         except Unauthorized:
@@ -214,19 +205,12 @@ class Lister:
         except CanvasException as e:
             self.outputter.poutput(f'{course.name}: {str(e)}')
 
-    def list_announcements(self, announcements_provider, course: Course, number=None, days=None, message=False):
-        if course is None:
-            self.outputter.poutput('No course specified.')
-            return False
-
-        display_topics = announcements_provider(course.id)
-
+    def list_announcements(self, display_topics, number=None, days=None, message=False):
         if number is not None:
             display_topics = display_topics[-number:]
 
         if days is not None:
-            display_topics = days_from_today(display_topics, days, key=lambda t: t.posted_at_date)
-
+            display_topics = filter_days_from_today(display_topics, days, key=lambda t: t.posted_at_date)
 
         if message:
             def print_topic(topic):
