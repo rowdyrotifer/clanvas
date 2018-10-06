@@ -1,0 +1,11 @@
+{
+  "id": 101,
+  "name": "Hugo First",
+  "sortable_name": "First, Hugo",
+  "short_name": "Hugo First",
+  "locale": null,
+  "permissions": {
+    "can_update_name": false,
+    "can_update_avatar": true
+  }
+}
