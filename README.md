@@ -1,3 +1,6 @@
+[![Clanvas on PyPI](https://img.shields.io/pypi/v/clanvas.svg)](https://pypi.python.org/pypi/clanvas)
+[![Build Status](https://travis-ci.org/marklalor/clanvas.svg?branch=master)](https://travis-ci.org/marklalor/clanvas)
+
 # Clanvas
 Command-line shell client for the [Canvas Learning Management System](https://github.com/instructure/canvas-lms)
 
