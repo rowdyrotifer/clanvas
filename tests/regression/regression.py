@@ -1,6 +1,10 @@
 import os
+import re
+import sys
 import unittest
 from functools import reduce
+from os import listdir
+from os.path import isfile, join, basename
 
 import requests_mock
 
@@ -13,7 +17,11 @@ login_requirements = {'user': {'self', 'profile'}, 'courses': {'courses'}}
 
 script_requirements = {
     'whoami/whoami': login_requirements,
-    'whoami/whoami_verbose': login_requirements
+    'whoami/whoami_verbose': login_requirements,
+    'lc/lc': login_requirements,
+    'lc/lc_long': login_requirements,
+    'lc/lc_all': login_requirements,
+    'lc/lc_long_all': login_requirements
 }
 
 
@@ -67,3 +75,14 @@ def regression_transcript_test(script):
         clanvas = Clanvas(transcript_files=[transcript_file])
         clanvas.onecmd(login_command)
         clanvas.cmdloop()  # runs the regression test automagically from the transcript
+
+
+if __name__ == '__main__':
+    regression_dir = os.path.dirname(__file__)
+    command_dirs = [d for d in listdir(regression_dir) if not isfile(join(regression_dir, d))]
+    command_scripts = [f'{basename(d)}/{f}' for d in command_dirs for f in listdir(d) if not '.' in f]
+
+    regex = '*' if len(sys.argv) == 1 else sys.argv[1]
+    pattern = re.compile(regex)
+    [generate_transcript(script) for script in filter(pattern.match, command_scripts)]
+
