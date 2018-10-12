@@ -1,0 +1,13 @@
+language: python
+sudo: false
+matrix:
+  include:
+  - name: "3.6 Regression Test"
+    python: 3.6
+    os: linux
+  - name: "3.7 Regression Test"
+    python: 3.7
+    os: linux
+  script: python -m unittest -v tests.regression.regression
+install:
+  - pip install -r dev_requirements.txt
