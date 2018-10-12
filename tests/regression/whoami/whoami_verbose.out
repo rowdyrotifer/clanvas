@@ -1,0 +1,7 @@
+[92mhgf123@example.com[0m:[33m~[0m:[34m~ [0m$ whoami -v
+name: Hugo First
+short_name: Hugo First
+login_id: hgf123
+primary_email: hgf123@example.com
+id: 101
+time_zone: America\/New_York

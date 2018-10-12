@@ -1,0 +1,8 @@
+canvasapi>=0.11,<0.12
+cmd2>=0.9,<0.10
+tabulate
+tree-format
+html2text
+colorama
+pytz
+tzlocal

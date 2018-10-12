@@ -19,12 +19,13 @@ from .utils import *
 class Clanvas(cmd2.Cmd):
     CLANVAS_CATEGORY = 'Clanvas'
     default_to_shell = True
+    allow_cli_args = False
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         self.settable.update({'prompt_string': 'prompt format string'})
         self.settable.update({'verbosity': 'default command verbosity (NORMAL/VERBOSE/DEBUG)'})
 
-        super(Clanvas, self).__init__()
+        super(Clanvas, self).__init__(*args, **kwargs)
 
         self.url = None
         self.host = None

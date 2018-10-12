@@ -2,9 +2,12 @@
 *.pyc
 *.pyo
 
+.DS_Store
+
 # rst is generated for PyPi with pandoc --from=markdown --to=rst --output=README.rst README.md
 README.rst
 
+venv/
 build/
 clanvas.egg-info/
 dist/
