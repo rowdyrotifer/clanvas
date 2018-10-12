@@ -7,8 +7,9 @@ matrix:
     os: linux
   - name: "3.7 Regression Test"
     python: 3.7
-    os: linux
+    dist: xenial
+    sudo: true
 install:
   - pip install -r dev_requirements.txt
 script:
-  - python -m unittest -v tests.regression.regression
+  - python -m unittest -v tests.regression.regression.TestRegression.run_all_regression_tests
