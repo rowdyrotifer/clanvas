@@ -79,7 +79,7 @@ class Clanvas(cmd2.Cmd):
         return Verbosity[self.verbosity]
 
     prompt_string = Fore.LIGHTGREEN_EX + '{login_id}@{host}' + Style.RESET_ALL + ':'\
-        + Fore.YELLOW + '{pwc}' + Style.RESET_ALL + ':' + Fore.BLUE + '{pwd} ' + Style.RESET_ALL + '$ '
+        + Fore.LIGHTYELLOW_EX + '{pwc}' + Style.RESET_ALL + ':' + Fore.LIGHTBLUE_EX + '{pwd} ' + Style.RESET_ALL + '$ '
 
     verbosity = 'NORMAL'
 
