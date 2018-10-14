@@ -4,6 +4,31 @@
 # Clanvas
 Command-line shell client for the [Canvas Learning Management System](https://github.com/instructure/canvas-lms)
 
+![Clanvas Screenshot](clanvas.png)
+
+### Available Commands
+
+In the Clanvas shell, all commands already on your system `PATH` are available.
+You can `cd` and `ls` as you please.
+
+In addition, the shell provides the following commands:
+
+|  Command  | Meaning                         |
+|-----------|---------------------------------|
+| lc        | list classes                    |
+| cc        | change current class            |
+| la        | list assignments                |
+| lg        | list grades                     |
+| lann      | list announcements              |
+| catann    | print announcements             |
+| pullf     | pull course files               |
+| ua        | upload submission to assignment |
+| wopen     | open in web interface           |
+| whoami    | show login info                 |
+| quit      | quit the shell                  |
+
+Type `help` to see all commands, and use the `-h` flag to show usage details for any particular command.
+
 ### Installation
 
 Clanvas is hosted on [PyPi](https://pypi.python.org/pypi/clanvas) and can be installed with `pip`.
@@ -94,28 +119,6 @@ echo "login https://canvas.school.edu bOYc5cOIldA3eB9NTr7X0Um9Z8TPMACb0HtdgHTMtp
 ```
 chmod 600 ~/.clanvasrc
 ```
-
-### Available Commands
-
-In the Clanvas shell, all commands already on your system `PATH` are available.
-
-In addition, the shell provides the following commands:
-
-|  Command  | Meaning                         |
-|-----------|---------------------------------|
-| lc        | list classes                    |
-| cc        | change current class            |
-| la        | list assignments                |
-| lg        | list grades                     |
-| lann      | list announcements              |
-| catann    | print announcements             |
-| pullf     | pull files                      |
-| ua        | upload submission to assignment |
-| wopen     | open in web interface           |
-| whoami    | show login info                 |
-| quit      | quit the shell                  |
-
-Type `help` to see all commands, and use the `-h` flag to show usage details for any particular command.
 
 ### Generating an API Token
 1. Navigate to /profile/settings
