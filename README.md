@@ -183,17 +183,15 @@ Congratulations, you have installed and set up a Python distribution with `GNU r
 Run `pip install clanvas` to celebrate.
 
 ## Contributing
-Currently the project is in an exploratory phase. I am implementing features that that I find useful and trying to tweak them as I go along to find a balance of easy-to-use and powerful.
 
-I would greatly appreciate feedback about what is missing or what interfaces should be changed.
-
-The project is definitely becoming more stable and gaining a clear direction, I've slowed down with the willy-nilly changes.
-
-I think regression tests would be a good place to start. cmd2 already [has a mechanism](https://cmd2.readthedocs.io/en/latest/transcript.html?highlight=history) for doing this.
+Pull requests are welcome! Check out the [contributing](CONTRIBUTING.md) page for details
+on how to help.
 
 ## Built With
-* [cmd2](https://github.com/python-cmd2/cmd2)
-* [canvasapi](https://github.com/ucfopen/canvasapi)
+These projects are used very directly, and both welcome pull requests. If you want to add an uncovered
+canvas endpoint, or change the behavior of the shell itself, check out these projects: 
+* [cmd2 (shell functionality)](https://github.com/python-cmd2/cmd2)
+* [canvasapi (canvas lms api wrapper)](https://github.com/ucfopen/canvasapi)
 
 ## License
 
