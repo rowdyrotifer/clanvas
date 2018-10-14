@@ -55,7 +55,7 @@ If you check the remotes, you will see that fetching and pushing is configured f
 your copy of the repository.
 
 ```
-$ git remote -v                                                                                         mark@mew
+$ git remote -v
 origin	https://github.com/yourusername/clanvas.git (fetch)
 origin	https://github.com/yourusername/clanvas.git (push)
 ```
@@ -69,7 +69,7 @@ $ git remote add upstream https://github.com/marklalor/clanvas.git
 Now you have another remote set to access the upstream changes! Check with `remote -v`
 
 ```
-$ git remote -v                                                                                         mark@mew
+$ git remote -v
 origin	  https://github.com/yourusername/clanvas.git (fetch)
 origin	  https://github.com/yourusername/clanvas.git (push)
 upstream  https://github.com/marklalor/clanvas.git (fetch)
