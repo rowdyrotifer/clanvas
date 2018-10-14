@@ -87,14 +87,12 @@ if __name__ == '__main__':
             login_args = interfaces.login_parser.parse_args(shlex.split(login_command)[1:])
             canvas = Canvas(login_args.url, login_args.token)
 
-        if canvas is None:
-            input_url = input('Please enter Canvas URL: ')
-            input_token = input('Please enter Canvas token: ')
-            canvas = Canvas(input_url, input_token)
+    if canvas is None:
+        input_url = input('Please enter Canvas URL: ')
+        input_token = input('Please enter Canvas token: ')
+        canvas = Canvas(input_url, input_token)
 
-        output = locals()[f'get_{args.action}'](canvas)
+    output = locals()[f'get_{args.action}'](canvas)
 
-        json.dump(output, fh, indent=2)
-    else:
-        print('rcfile does not exist')
+    json.dump(output, fh, indent=2)
 
