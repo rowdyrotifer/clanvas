@@ -2,14 +2,20 @@ language: python
 sudo: false
 matrix:
   include:
-  - name: "3.6 Regression Test"
+  - name: 3.6 Regression Test
     python: 3.6
     os: linux
-  - name: "3.7 Regression Test"
+  - name: 3.7 Regression Test
     python: 3.7
     dist: xenial
     sudo: true
 install:
-  - pip install -r dev_requirements.txt
+- pip install -r dev_requirements.txt
 script:
-  - python -m unittest -v tests.regression.regression.TestRegression.run_all_regression_tests
+- python -m unittest -v tests.regression.regression.TestRegression.run_all_regression_tests
+notifications:
+  slack:
+    rooms:
+      secure: fJ3nsApYRzQ1v2VM+ceXFvGO0WZIw/VdWaM1nqbjamTZKmXlL1GLh9xX4FE+Pf9GGJJw4kGPhADiXOlrGg3fy2jQIUjB3IQNi4vJHDwIvLAeC/kq9F5ADx+Jg7en+Q4tGEhy/eubo92pDJMFTYiRTYknVFM8mMEV7aioPaYwudUGs7Uf3CZpeoNNfEokrI36eUuM5msQBGBb7FxQHDL7DZb3Y5VdmwFsf7PmEkAiLKqQt+GjlP6J0mG2s57j21luGvNUqmbQTf8kH5wpQXVYT8KpHO1/9nV3L/U8kDNNfDv6TL3XKuY4BT/2wTtdKfImGQd6tuOm3HulJIBQ7YDiNWA/GbJ8MorTxNDl6AXEkZCGTpXxZP8y0CO2i/KHIWWUtmxYn6Y7msTTqUT4Pklql6Xqo7WzsVaoF8ZMZAtPR2KWk5zw43K6q0qFVVkHfVV+wjXaHXm0s2Ch5Bg17whUtrq3w51w8C7pOC05jZrmVukoYMTY6mKUWZ1CGICm3LZQ5apXs2ZTBthlIdbU31XYUjgyg0W7eN+sCiftpq97iR7CU4cjfw3AwDW0J+liBAqMVXTELRmGNQJRc2jstlT23MAKBZNChPrwkgFOzDWiyL+R6Ul+YBA8BYq8pDLubkOc41IIGJWLgq0gBRoBeQ/uC/QT3F8bqlqtp53wTmU7mj8=
+    on_success: change
+    on_failure: always
