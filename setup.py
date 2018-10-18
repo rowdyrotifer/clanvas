@@ -2,12 +2,12 @@ from setuptools import setup
 
 setup(
     name='clanvas',
-    version='0.2.2',
-    url='https://github.com/MarkLalor/Clanvas',
+    version='0.2.3',
+    url='https://github.com/marklalor/clanvas',
     license='MIT',
     author='Mark Lalor',
     author_email='markwlalor@gmail.com',
-    install_requires=['canvasapi>=0.11,<0.12', 'cmd2==0.9.4', 'tabulate', 'tree-format',
+    install_requires=['canvasapi>=0.11,<0.12', 'cmd2<0.10.0', 'tabulate', 'tree-format',
                       'html2text', 'colorama', 'pytz', 'tzlocal'],
     packages=['clanvas'],
     entry_points={'console_scripts': ['clanvas = clanvas.clanvas:main']},
