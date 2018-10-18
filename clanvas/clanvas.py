@@ -22,10 +22,10 @@ class Clanvas(cmd2.Cmd):
     allow_cli_args = False
 
     def __init__(self, *args, **kwargs):
-        self.settable.update({'prompt_string': 'prompt format string'})
-        self.settable.update({'verbosity': 'default command verbosity (NORMAL/VERBOSE/DEBUG)'})
-
         super(Clanvas, self).__init__(*args, **kwargs)
+        self.settable.update({'prompt_format': 'prompt format string'})
+        self.settable.update({'verbosity': 'default command verbosity (NORMAL/VERBOSE/DEBUG)'})
+        self.settable.pop('prompt')
 
         self.url = None
         self.host = None
@@ -78,8 +78,9 @@ class Clanvas(cmd2.Cmd):
     def get_verbosity(self) -> Verbosity:
         return Verbosity[self.verbosity]
 
-    prompt_string = Fore.LIGHTGREEN_EX + '{login_id}@{host}' + Style.RESET_ALL + ':'\
-        + Fore.LIGHTYELLOW_EX + '{pwc}' + Style.RESET_ALL + ':' + Fore.LIGHTBLUE_EX + '{pwd} ' + Style.RESET_ALL + '$ '
+    prompt_format = (Fore.LIGHTGREEN_EX + '{login_id}@{host}' + Style.RESET_ALL + ':'
+                     + Fore.LIGHTYELLOW_EX + '{pwc}' + Style.RESET_ALL + ':' + Fore.LIGHTBLUE_EX
+                     + '{pwd} ' + Style.RESET_ALL + '$ ').replace('\x1b', "\\x1b")
 
     verbosity = 'NORMAL'
 
@@ -111,7 +112,7 @@ class Clanvas(cmd2.Cmd):
         if self.canvas is None:
             return '$ '
 
-        return self.prompt_string.format(
+        return self.prompt_format.replace('\\x1b', '\x1b').format(
             login_id=self.current_user_profile()['login_id'],
             host=self.host,
             pwc=self.current_course.course_code if self.current_course is not None else '~',
