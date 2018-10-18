@@ -196,7 +196,7 @@ class Clanvas(cmd2.Cmd):
 
         except ResourceDoesNotExist as e:
             get_outputter().poutput('Invalid assignment ID.')
-            get_outputter().poutput_debug(f'Course {opts.course.id} has no assignment {opts.id}')
+            get_outputter().poutput_debug(f'Course {course.id} has no assignment {opts.id}')
 
     @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
@@ -235,7 +235,7 @@ class Clanvas(cmd2.Cmd):
         destination_path = join(
             *[os.path.expanduser('~'), 'canvas', 'courses', code, 'files']) if opts.output is None else opts.output
 
-        pull_all_files(destination_path, opts.course)
+        pull_all_files(destination_path, course)
 
 
 def main():
