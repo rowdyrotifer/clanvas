@@ -150,5 +150,7 @@ def filter_future_assignments(assignments):
 
 
 def filter_latest_term_courses(courses):
+    if len(courses) == 0:
+        return []
     latest_term_int = max(course.enrollment_term_id for course in courses)
     return filter(lambda course: course.enrollment_term_id == latest_term_int, courses)

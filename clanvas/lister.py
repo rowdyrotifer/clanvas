@@ -28,13 +28,16 @@ def calculate_group_ratio(group, assignment_submission_pairs):
 def list_courses(courses, all=False, long=False):
     display_courses = courses if all else filter_latest_term_courses(courses)
 
-    if long:
-        def course_info_items(c):
-            return [c.course_code, c.id, c.term['name'] if hasattr(c, 'term') else '', c.name]
+    if display_courses:
+        if long:
+            def course_info_items(c):
+                return [c.course_code, c.id, c.term['name'] if hasattr(c, 'term') else '', c.name]
 
-        get_outputter().poutput(tabulate(map(course_info_items, display_courses), tablefmt='plain'))
+            get_outputter().poutput(tabulate(map(course_info_items, display_courses), tablefmt='plain'))
+        else:
+            get_outputter().poutput('\n'.join([unique_course_code(c) for c in display_courses]))
     else:
-        get_outputter().poutput('\n'.join([unique_course_code(c) for c in display_courses]))
+        get_outputter().poutput('No courses available.')
 
 
 def list_assignments(course: Course, assignments_provider, long=False, submissions=False, upcoming=False):
