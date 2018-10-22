@@ -1,8 +1,9 @@
 # Contributing to Clanvas
 
-Thanks for your interest in helping out. Take a look at some of the 
+Thanks for your interest in helping out. Take a look at some of the guides below to get started.A
 
 ## Contribution guidelines
+* [Development/test server](#developmenttest-server)
 * [Setting up a development environment](#setting-up-a-development-environment)
   * [Required software](#required-software)
   * [Forking the repo](#forking-the-repo)
@@ -18,6 +19,18 @@ Thanks for your interest in helping out. Take a look at some of the
   * [Creating a pull request](#creating-a-pull-request)
 * [Other Resources](#other-resources)
   * [Case students](#case-students)
+
+## Development/test server
+
+I've set up a Canvas server where I can give people permissions to create courses so that we can
+test anything: admin, professor, TA, and student features.
+
+Send me an email at [markwlalor@gmail.com](mailto:markwlalor@gmail.com) (or a message on
+Slack if you are a Case student) and I'll make you an account, let me know the email address
+you want to use with the account as well as the SIS ID you want to use. I'll create an account
+with a random password which you can change. Then you can log in at
+[https://canvas.marklalor.com](https://canvas.marklalor.com). Maybe at some point we can set
+up a server for doing integration tests as well.
 
 ## Setting up a development environment
 
