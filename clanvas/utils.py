@@ -38,6 +38,10 @@ def unique_course_code(course):
     return course.course_code.replace(' ', '') + '-' + str(course.id)
 
 
+def course_name_or_unique_course_code(course):
+    return course.name if hasattr(course, 'name') else unique_course_code(course)
+
+
 def assignment_info_items(a):
     return [a.id, compact_datetime(a.due_at_date) if hasattr(a, 'due_at_date') else '', a.name]
 

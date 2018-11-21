@@ -31,7 +31,10 @@ def list_courses(courses, all=False, long=False):
     if display_courses:
         if long:
             def course_info_items(c):
-                return [c.course_code, c.id, c.term['name'] if hasattr(c, 'term') else '', c.name]
+                return [c.course_code,
+                        c.id,
+                        c.term['name'] if hasattr(c, 'term') else '',
+                        c.name if hasattr(c, 'name') else '']
 
             get_outputter().poutput(tabulate(map(course_info_items, display_courses), tablefmt='plain'))
         else:
@@ -159,6 +162,8 @@ def list_grades(course: Course, long=False, hide_ungraded=False):
                 course = item
                 groups_item = node[1]
 
+                course_name = course_name_or_unique_course_code(course)
+
                 def weighted_contribution(group, assignment_submission_pairs):
                     ratio = calculate_group_ratio(group, assignment_submission_pairs)[0]
                     return (group.group_weight/100) * ratio if ratio is not None else group.group_weight/100
@@ -167,9 +172,9 @@ def list_grades(course: Course, long=False, hide_ungraded=False):
                 if weighted_sum > 0:
                     percentage = percentage_string(weighted_sum, 1)
                     color = best_color(weighted_sum) if weighted_sum > 0 else ''
-                    return color + course.name + ' ' + percentage + Style.RESET_ALL
+                    return color + course_name + ' ' + percentage + Style.RESET_ALL
                 else:
-                    return course.name
+                    return course_name
             elif isinstance(item, AssignmentGroup):
                 group = item
                 assignment_submission_pairs = node[1]
@@ -203,9 +208,9 @@ def list_grades(course: Course, long=False, hide_ungraded=False):
 
         get_outputter().poutput(format_tree(tree, format_node=format_node, get_children=get_children), end='')
     except Unauthorized:
-        get_outputter().poutput(f'{course.name}: Unauthorized')
+        get_outputter().poutput(f'{course_name_or_unique_course_code(course)}: Unauthorized')
     except CanvasException as e:
-        get_outputter().poutput(f'{course.name}: {str(e)}')
+        get_outputter().poutput(f'{course_name_or_unique_course_code(name)}: {str(e)}')
 
 
 def list_announcements(display_topics, number=None, days=None, message=False):

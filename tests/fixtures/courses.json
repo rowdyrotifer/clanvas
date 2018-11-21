@@ -4,7 +4,7 @@
     "method": "GET",
     "status": 200,
     "compose": ["course_1", "course_2", "course_3", "course_4",
-      "course_5", "course_6", "course_7", "course_8"]
+      "course_5", "course_6", "course_7", "course_8", "course_9"]
   },
   "course_1": {
     "path": "courses/13682",
@@ -300,6 +300,45 @@
       "is_public": false,
       "created_at": "2017-08-27T02:05:27Z",
       "course_code": "MATH 380",
+      "default_view": "feed",
+      "root_account_id": 1,
+      "enrollment_term_id": 11,
+      "end_at": null,
+      "public_syllabus": false,
+      "public_syllabus_to_auth": false,
+      "storage_quota_mb": 500,
+      "is_public_to_auth_users": false,
+      "apply_assignment_group_weights": false,
+      "time_zone": "America/New_York",
+      "blueprint": false,
+      "enrollments": [
+        {
+          "type": "student",
+          "role": "StudentEnrollment",
+          "role_id": 3,
+          "user_id": 57030,
+          "enrollment_state": "active"
+        }
+      ],
+      "hide_final_grades": false,
+      "workflow_state": "available",
+      "course_format": "on_campus",
+      "restrict_enrollments_to_course_dates": false
+    }
+  },
+  "course_9": {
+    "path": "courses/9371",
+    "method": "GET",
+    "status": 200,
+    "body": {
+      "id": 9371,
+      "account_id": 501,
+      "uuid": "We8HARQUmsVtJ5Q3dRAmSix53auK7yMJA8pGel9pv",
+      "start_at": "2017-04-27T03:00:27Z",
+      "grading_standard_id": null,
+      "is_public": false,
+      "created_at": "2017-04-27T03:00:27Z",
+      "course_code": "NMLS 101",
       "default_view": "feed",
       "root_account_id": 1,
       "enrollment_term_id": 11,
