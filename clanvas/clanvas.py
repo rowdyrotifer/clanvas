@@ -54,7 +54,8 @@ class Clanvas(cmd2.Cmd):
     def get_courses(self, **kwargs):
         return {course.id: course for course in sorted(
             self.canvas.get_current_user().get_courses(include=['term', 'total_scores']),
-            key=lambda course: (-course.enrollment_term_id if hasattr(course, 'enrollment_term_id') else 0, course.name))}
+            key=lambda course: (-course.enrollment_term_id if hasattr(course, 'enrollment_term_id') else 0,
+                                course.name if hasattr(course, 'name') else ''))}
 
     @blocking_lru
     def current_user_profile(self, **kwargs):
