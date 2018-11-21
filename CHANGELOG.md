@@ -1,3 +1,17 @@
+### 0.2.4
+* Fix bug which caused crash if no courses were associated with the account.
+* Fix bug which caused crash if a course has no name.
+
+### 0.2.3
+* Change the default prompt colors to higher contrast.
+* Make it easy to customize prompt colors by allowing `ESC` (`\x1B`) in the `prompt_format`
+* Rename `prompt_string` to `prompt_format`
+* Fix `pullf` which was totally broken by a change in the previous release. This is why adding more regression tests is priority!
+
+### 0.2.2
+* Fixes the version of `cmd2` to exactly `0.9.4` because of a bug that caused Clanvas to crash. This should be resolved in `0.9.6` of `cmd2`.
+* Regression tests in the dev environment!
+
 ### 0.2.1
 
 * Cleaned up tab-completion code and hooked in to some nice cmd2
