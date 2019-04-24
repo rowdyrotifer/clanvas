@@ -1,13 +1,15 @@
 import os
 import readline
+import sys
 import webbrowser
 from os.path import isfile, join, expanduser
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 import cmd2
 import colorama
 from canvasapi import Canvas
 
+from .config import InvalidClanvasConfigurationException, parse_clanvas_config_file
 from .completion import get_completer_mapping
 from .filesynchronizer import pull_all_files
 from .interfaces import *
@@ -248,10 +250,30 @@ def main():
 
     cmd = Clanvas()
 
-    rc_file = join(expanduser('~'), '.clanvasrc')
-    if isfile(rc_file):
-        cmd.onecmd('load ' + rc_file)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('name', nargs='?', default=None)
+    args = parser.parse_args()
 
+    if args.name:
+        config_file = join(expanduser('~'), '.clanvas', 'config')
+        if isfile(config_file):
+            try:
+                config = parse_clanvas_config_file(config_file)
+            except InvalidClanvasConfigurationException as e:
+                print(f'{config_file}: e.message')
+                print(f'{config_file}: terminating, bad configuration')
+                sys.exit(1)
+            except:
+                print(f'{config_file}: terminating, unspecified error in configuration')
+                sys.exit(1)
+
+            if args.name in config:
+                entry = config[args.name]
+                cmd.onecmd(f'login -q {entry["url"]} {entry["token"]}')
+            else:
+                print(f'No entry for name "{args.name}" in clanvas config')
+
+    cmd.allow_cli_args = False
     cmd.cmdloop()
 
 
