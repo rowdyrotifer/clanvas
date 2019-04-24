@@ -260,22 +260,19 @@ def main():
 
     if args.name:
         config_file = join(expanduser('~'), '.clanvas', 'config')
-        if isfile(config_file):
-            try:
-                config = parse_clanvas_config_file(config_file)
-            except InvalidClanvasConfigurationException as e:
-                print(f'{config_file}: e.message')
-                print(f'{config_file}: terminating, bad configuration')
-                sys.exit(1)
-            except:
-                print(f'{config_file}: terminating, unspecified error in configuration')
-                sys.exit(1)
 
-            if args.name in config:
-                entry = config[args.name]
-                cmd.onecmd(f'login -q {entry["url"]} {entry["token"]}')
-            else:
-                print(f'No entry for name "{args.name}" in clanvas config')
+        try:
+            config = parse_clanvas_config_file(config_file) if isfile(config_file) else {}
+        except InvalidClanvasConfigurationException as e:
+            print(f'{config_file}: {e.message}')
+            print(f'{config_file}: terminating, bad configuration.')
+            sys.exit(1)
+
+        if args.name in config:
+            entry = config[args.name]
+            cmd.onecmd(f'login -q {entry["url"]} {entry["token"]}')
+        else:
+            print(f'No entry for name "{args.name}" in clanvas config')
 
     cmd.allow_cli_args = False
     cmd.cmdloop()
