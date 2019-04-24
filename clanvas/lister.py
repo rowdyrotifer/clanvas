@@ -210,7 +210,7 @@ def list_grades(course: Course, long=False, hide_ungraded=False):
     except Unauthorized:
         get_outputter().poutput(f'{course_name_or_unique_course_code(course)}: Unauthorized')
     except CanvasException as e:
-        get_outputter().poutput(f'{course_name_or_unique_course_code(name)}: {str(e)}')
+        get_outputter().poutput(f'{course_name_or_unique_course_code(course)}: {str(e)}')
 
 
 def list_announcements(display_topics, number=None, days=None, message=False):

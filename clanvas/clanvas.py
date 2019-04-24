@@ -155,28 +155,30 @@ class Clanvas(cmd2.Cmd):
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lc_parser)
     def do_lc(self, opts):
-        list_courses(self.get_courses().values(), **vars(opts))
+        list_courses(self.get_courses().values(), all=opts.all, long=opts.long)
 
     @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(la_parser)
     @argparser_course_required_wrapper
     def do_la(self, course, opts):
-        return list_assignments(course, self.list_assignments_cached, **vars(opts))
+        return list_assignments(course, self.list_assignments_cached, long=opts.long,
+                                submissions=opts.submissions, upcoming=opts.upcoming)
 
     @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lg_parser)
     @argparser_course_required_wrapper
     def do_lg(self, course, opts):
-        return list_grades(course, **vars(opts))
+        return list_grades(course, long=opts.long, hide_ungraded=opts.hide_ungraded)
 
     @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lann_parser)
     @argparser_course_required_wrapper
     def do_lann(self, course: Course, opts):
-        return list_announcements(self.list_announcements_cached(course.id), **vars(opts))
+        return list_announcements(self.list_announcements_cached(course.id), number=opts.number,
+                                  days=opts.days, message=opts.message)
 
     @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
@@ -209,9 +211,11 @@ class Clanvas(cmd2.Cmd):
         course_tabs = self.list_tabs_cached(course.id)
         given_tabs_set = frozenset([tab.lower() for tab in opts.tabs])
 
-        matched_tabs = filter(lambda course_tab: course_tab.label.lower() in given_tabs_set, course_tabs)
-        if not matched_tabs:
-            get_outputter().poutput(f'No tab found matching "{tab}"')
+        matched_tabs = list(filter(lambda course_tab: course_tab.label.lower() in given_tabs_set, course_tabs))
+
+        if len(matched_tabs) == 0:
+            for tab in opts.tabs:
+                get_outputter().poutput(f'No tab found matching "{tab}"')
             return False
 
         for tab in matched_tabs:

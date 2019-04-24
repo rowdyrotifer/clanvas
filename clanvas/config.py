@@ -1,6 +1,4 @@
-import json
 from itertools import groupby
-from os.path import join, dirname
 
 
 class InvalidClanvasConfigurationException(Exception):
@@ -35,6 +33,7 @@ def parse_clanvas_config_file(filename):
     with open(filename, 'r') as f:
         config_string = f.read()
         return parse_clanvas_config(config_string)
+
 
 def parse_clanvas_config(config_string):
     tokens = config_string.split()
