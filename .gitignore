@@ -11,6 +11,3 @@ venv/
 build/
 clanvas.egg-info/
 dist/
-
-# Workaround to debug as a module in IntelliJ
-clanvas/runner.py
