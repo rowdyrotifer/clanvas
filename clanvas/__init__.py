@@ -1,1 +1,1 @@
-__all__ = ['clanvas', 'commandutil', 'filesynchronizer', 'filters', 'lister', 'outputter', 'utils']
+__all__ = ['clanvas',  'config', 'filesynchronizer', 'lister', 'outputter', 'utils']
