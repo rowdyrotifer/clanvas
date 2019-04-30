@@ -2,15 +2,17 @@ import os
 import readline
 import sys
 import webbrowser
+from functools import partialmethod
 from os.path import isfile, join, expanduser
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse
 
 import cmd2
 import colorama
 from canvasapi import Canvas
+from cmd2 import Cmd
 
+from .completion import apply_completers
 from .config import InvalidClanvasConfigurationException, parse_clanvas_config_file
-from .completion import get_completer_mapping
 from .filesynchronizer import pull_all_files
 from .interfaces import *
 from .lister import *
@@ -20,11 +22,13 @@ from .utils import *
 
 class Clanvas(cmd2.Cmd):
     CLANVAS_CATEGORY = 'Clanvas'
-    default_to_shell = True
-    allow_cli_args = False
 
     def __init__(self, *args, **kwargs):
         super(Clanvas, self).__init__(*args, **kwargs)
+
+        self.default_to_shell = True
+        self.allow_cli_args = False
+
         self.settable.update({'prompt_format': 'prompt format string'})
         self.settable.update({'verbosity': 'default command verbosity (NORMAL/VERBOSE/DEBUG)'})
         self.settable.pop('prompt')
@@ -40,14 +44,11 @@ class Clanvas(cmd2.Cmd):
 
         bind_outputter(functools.partial(self.poutput, end=''), self.get_verbosity)
 
-        # Clanvas commands
-        command_completers = get_completer_mapping(self)
-        for command, completer in command_completers.items():
-            setattr(self, 'complete_' + command, completer)
+        apply_completers(self)
 
-        # GNU commands
+        # Some GNU commands
         for command in ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 'tail', 'ls']:
-            setattr(self, 'complete_' + command, functools.partialmethod(self.path_complete, dir_only=False))
+            setattr(self, 'complete_' + command, Cmd.path_complete)
 
     def get_caches(self):
         return self._caches
@@ -178,7 +179,7 @@ class Clanvas(cmd2.Cmd):
     @argparser_course_required_wrapper
     def do_lann(self, course: Course, opts):
         return list_announcements(self.list_announcements_cached(course.id), number=opts.number,
-                                  days=opts.days, message=opts.message)
+                                  days=opts.days, print=opts.print)
 
     @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
@@ -246,6 +247,10 @@ class Clanvas(cmd2.Cmd):
 
 
 def main():
+    if 'DEBUG' in os.environ:
+        import pydevd
+        pydevd.settrace('localhost', suspend=False, port=5678)
+
     if 'libedit' in readline.__doc__:
         readline.parse_and_bind("bind -e")
         readline.parse_and_bind("bind '\t' rl_complete")

@@ -213,14 +213,14 @@ def list_grades(course: Course, long=False, hide_ungraded=False):
         get_outputter().poutput(f'{course_name_or_unique_course_code(course)}: {str(e)}')
 
 
-def list_announcements(display_topics, number=None, days=None, message=False):
+def list_announcements(display_topics, number=None, days=None, print=False):
     if number is not None:
         display_topics = display_topics[-number:]
 
     if days is not None:
         display_topics = filter_days_from_today(display_topics, days, key=lambda t: t.posted_at_date)
 
-    if message:
+    if print:
         def print_topic(topic):
             return '\n'.join([topic.user_name, topic.title, html2text('\n'.join(topic.message.splitlines())).strip()])
         output = '\n=================\n'.join(map(print_topic, display_topics))

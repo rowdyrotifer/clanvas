@@ -1,12 +1,14 @@
-import functools
 import io
+import os
 import shlex
 from contextlib import redirect_stderr
+from functools import partial, wraps
 
-from cmd2.argparse_completer import AutoCompleter
+from cmd2.argparse_completer import CompletionItem
 
-from .interfaces import wopen_parser, course_query_or_cc, catann_parser, ua_parser, course_option_parser, pullf_parser, \
-    lg_parser, lann_parser, la_parser, cd_parser, cc_parser
+from .interfaces import course_query_or_cc, course_option_parser, course_actions, \
+    catann_parser_ids_action, wopen_parser_tabs_action, pullf_parser_output_action, ua_parser_id_action, \
+    ua_parser_file_action, cd_parser_directory_action
 from .utils import unique_course_code, filter_courses
 
 
@@ -27,7 +29,7 @@ def parse_partial(argparser, line):
 
 
 def course_required_completer(completer_function):
-    @functools.wraps(completer_function)
+    @wraps(completer_function)
     def call_with_course(text, line, begidx, endidx, clanvas):
         opts = parse_partial(course_option_parser, line)
         if opts is None:
@@ -42,53 +44,32 @@ def course_required_completer(completer_function):
     return call_with_course
 
 
-def create_completer(completer_data, cmd2_app):
-    def completer_implementation(text, line, begidx, endidx):
-        if isinstance(completer_data, tuple):
-            parser, choices = completer_data
-            completer = AutoCompleter(parser, cmd2_app=cmd2_app, arg_choices=choices)
-            tokens, _ = cmd2_app.tokens_for_completion(line, begidx, endidx)
-            results = completer.complete_command(tokens, text, line, begidx, endidx)
-            return results
-        else:
-            return completer_data(text, line, begidx, endidx)
-
-    return completer_implementation
-
-
-def with_course_optional(clanvas, choices={}):
-    return {'course': (_course_completer,[clanvas]), **choices}
-
-
 def _course_completer(text, line, begidx, endidx, clanvas):
-    return list(map(unique_course_code, filter_courses(clanvas.get_courses().values(), line[begidx:endidx])))
+    courses = filter_courses(clanvas.get_courses().values(), query=line[begidx:endidx])
+
+    def completion_item(course):
+        return CompletionItem(unique_course_code(course), course.name if hasattr(course, 'name') else '')
+    return [completion_item(course) for course in courses]
 
 
-def get_completer_mapping(clanvas):
-    return {key: create_completer(completer_data, clanvas) for key, completer_data in {
-        'catann': (catann_parser, with_course_optional(clanvas, {
-            'ids': (_catann_tab_completer, [clanvas])
-        })),
-        'cc': (cc_parser, {
-            'course': (_course_completer, [clanvas])
-        }),
-        'cd': (cd_parser, with_course_optional(clanvas, {
-            'directory': (clanvas.path_complete, [True])
-        })),
-        'la': (la_parser, with_course_optional(clanvas, {})),
-        'lann': (lann_parser, with_course_optional(clanvas, {})),
-        'lg': (lg_parser, with_course_optional(clanvas, {})),
-        'pullf': (pullf_parser, with_course_optional(clanvas, {
-            'output': (clanvas.path_complete, [True])
-        })),
-        'ua': (ua_parser, with_course_optional(clanvas, {
-            'id': (_assignment_completer, [clanvas]),
-            'file': (clanvas.path_complete,)
-        })),
-        'wopen': (wopen_parser, with_course_optional(clanvas, {
-            'tabs': (_wopen_tab_completer, [clanvas])
-        }))
-        }.items()}
+def apply_completers(clanvas):
+    catann_parser_ids_action.arg_choices = (_catann_tab_completer, [clanvas])
+    catann_parser_ids_action.desc_header = 'Title'
+
+    cd_parser_directory_action.arg_choices = (partial(clanvas.path_complete, path_filter=os.path.isdir), None)
+
+    pullf_parser_output_action.arg_choices = (partial(clanvas.path_complete, path_filter=os.path.isdir), None)
+
+    ua_parser_id_action.arg_choices = (_assignment_completer, [clanvas])
+    ua_parser_id_action.desc_header = 'Name'
+
+    ua_parser_file_action.arg_choices = (clanvas.path_complete, None)
+
+    wopen_parser_tabs_action.arg_choices = (_wopen_tab_completer, [clanvas])
+
+    for course_complete_action in course_actions:
+        course_complete_action.arg_choices = (_course_completer, [clanvas])
+        course_complete_action.desc_header = 'Name'
 
 
 # TODO: radix tree for more CPU efficiency at the cost of memory efficiency?
@@ -100,14 +81,18 @@ def startswith_completer(input, iterable, case_sensitive=False):
 
 @course_required_completer
 def _assignment_completer(text, line, begidx, endidx, course, clanvas):
+    def completion_item(assignment):
+        return CompletionItem(str(assignment.id), assignment.name if hasattr(assignment, 'name') else '')
     return startswith_completer(line[begidx:endidx],
-                                [str(assignment.id) for assignment in clanvas.list_assignments_cached(course.id)])
+                                [completion_item(assignment) for assignment in clanvas.list_assignments_cached(course.id)])
 
 
 @course_required_completer
 def _catann_tab_completer(text, line, begidx, endidx, course, clanvas):
+    def completion_item(announcement):
+        return CompletionItem(str(announcement.id), announcement.title if hasattr(announcement, 'title') else '')
     return startswith_completer(line[begidx:endidx],
-                                [str(ann.id) for ann in clanvas.list_announcements_cached(course.id)])
+                                [completion_item(ann) for ann in clanvas.list_announcements_cached(course.id)])
 
 
 @course_required_completer
