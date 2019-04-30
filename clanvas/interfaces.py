@@ -44,17 +44,6 @@ def argparser_course_required_wrapper(with_argparser):
     return inject_argparser
 
 
-def login_required_wrapper(command_func):
-    @functools.wraps(command_func)
-    def inject_argparser(self, *args, **kwargs):
-        if self.canvas is None:
-            get_outputter().poutput('This command requires login. See "login -h"')
-            return False
-        return command_func(self, *args, **kwargs)
-
-    return inject_argparser
-
-
 DEFAULT = '__DEFAULT__'
 
 course_option_parser = argparse.ArgumentParser()

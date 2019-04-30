@@ -1,7 +1,10 @@
 import functools
+import os
 import threading
 from collections import defaultdict
 from datetime import datetime, timedelta
+from os.path import join, expanduser
+from sys import platform
 
 import pytz
 from canvasapi.course import Course
@@ -9,6 +12,19 @@ from tabulate import tabulate
 from tzlocal import get_localzone
 
 from .outputter import get_outputter
+
+
+def clanvas_dir():
+    return join(expanduser('~'), '.clanvas')
+
+
+def clanvas_data_dir():
+    if platform == "linux" or platform == "linux2":
+        return join('/var', 'lib', 'clanvas')
+    elif platform == "darwin":
+        return join(expanduser('~'), 'Library', 'Application Support', 'Clanvas')
+    elif platform == "win32":
+        return join(os.environ['APPDATA'], 'Clanvas')
 
 
 def rstrip_zeroes(float_var):

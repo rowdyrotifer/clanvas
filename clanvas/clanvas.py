@@ -3,6 +3,8 @@ import readline
 import sys
 import webbrowser
 from functools import partialmethod
+from getpass import getpass
+from os import makedirs
 from os.path import isfile, join, expanduser
 from urllib.parse import urlparse
 
@@ -23,7 +25,7 @@ from .utils import *
 class Clanvas(cmd2.Cmd):
     CLANVAS_CATEGORY = 'Clanvas'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, base_url, access_token, *args, **kwargs):
         super(Clanvas, self).__init__(*args, **kwargs)
 
         self.default_to_shell = True
@@ -33,22 +35,17 @@ class Clanvas(cmd2.Cmd):
         self.settable.update({'verbosity': 'default command verbosity (NORMAL/VERBOSE/DEBUG)'})
         self.settable.pop('prompt')
 
-        self.url = None
-        self.host = None
-        self.canvas = None  # type: Canvas
+        self.url = base_url
+        self.host = urlparse(base_url).netloc
+        self.canvas = Canvas(base_url, access_token)  # type: Canvas
 
         self.home = os.path.expanduser("~")
 
         self.current_course = None  # type: Course
-        self.current_directory = self.home
 
         bind_outputter(functools.partial(self.poutput, end=''), self.get_verbosity)
 
         apply_completers(self)
-
-        # Some GNU commands
-        for command in ['cat', 'tac', 'nl', 'od', 'base32', 'base64', 'fmt', 'tail', 'ls']:
-            setattr(self, 'complete_' + command, Cmd.path_complete)
 
     def get_caches(self):
         return self._caches
@@ -93,25 +90,6 @@ class Clanvas(cmd2.Cmd):
     # cmd2 attribute that determines the prompt format
     prompt = property(lambda self: self.get_prompt())
 
-    @cmd2.with_category(CLANVAS_CATEGORY)
-    @cmd2.with_argparser(login_parser)
-    def do_login(self, opts):
-        if self.canvas is not None:
-            get_outputter().poutput('Already logged in.')
-            return False
-
-        self.url = opts.url
-        self.host = urlparse(opts.url).netloc
-
-        self.canvas = Canvas(opts.url, opts.token)
-
-        if not opts.quiet:
-            profile = self.current_user_profile()
-            get_outputter().poutput('Logged in as {:s} ({:s})'.format(profile['name'], profile['login_id']))
-            call_eagerly(self.get_courses)
-        else:
-            call_eagerly(self.get_courses, self.current_user_profile)
-
     def get_prompt(self):
         if self.canvas is None:
             return '$ '
@@ -140,7 +118,6 @@ class Clanvas(cmd2.Cmd):
             except Exception as ex:
                 get_outputter().poutput('{}'.format(ex))
 
-    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(cc_parser)
     def do_cc(self, opts):
@@ -152,13 +129,11 @@ class Clanvas(cmd2.Cmd):
         if match is not None:
             self.current_course = match
 
-    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lc_parser)
     def do_lc(self, opts):
         list_courses(self.get_courses().values(), all=opts.all, long=opts.long)
 
-    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(la_parser)
     @argparser_course_required_wrapper
@@ -166,14 +141,12 @@ class Clanvas(cmd2.Cmd):
         return list_assignments(course, self.list_assignments_cached, long=opts.long,
                                 submissions=opts.submissions, upcoming=opts.upcoming)
 
-    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lg_parser)
     @argparser_course_required_wrapper
     def do_lg(self, course, opts):
         return list_grades(course, long=opts.long, hide_ungraded=opts.hide_ungraded)
 
-    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(lann_parser)
     @argparser_course_required_wrapper
@@ -181,14 +154,12 @@ class Clanvas(cmd2.Cmd):
         return list_announcements(self.list_announcements_cached(course.id), number=opts.number,
                                   days=opts.days, print=opts.print)
 
-    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(catann_parser)
     @argparser_course_required_wrapper
     def do_catann(self, course: Course, opts):
         return list_announcement(course, opts.ids)
 
-    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(ua_parser)
     @argparser_course_required_wrapper
@@ -204,7 +175,6 @@ class Clanvas(cmd2.Cmd):
             get_outputter().poutput('Invalid assignment ID.')
             get_outputter().poutput_debug(f'Course {course.id} has no assignment {opts.id}')
 
-    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(wopen_parser)
     @argparser_course_required_wrapper
@@ -222,7 +192,6 @@ class Clanvas(cmd2.Cmd):
         for tab in matched_tabs:
             webbrowser.open(tab.full_url, new=2)
 
-    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(whoami_parser)
     def do_whoami(self, opts):
@@ -234,7 +203,6 @@ class Clanvas(cmd2.Cmd):
             verbose_fields = ['name', 'short_name', 'login_id', 'primary_email', 'id', 'time_zone']
             get_outputter().poutput('\n'.join([field + ': ' + str(profile[field]) for field in verbose_fields]))
 
-    @login_required_wrapper
     @cmd2.with_category(CLANVAS_CATEGORY)
     @cmd2.with_argparser(pullf_parser)
     @argparser_course_required_wrapper
@@ -244,6 +212,42 @@ class Clanvas(cmd2.Cmd):
             *[os.path.expanduser('~'), 'canvas', 'courses', code, 'files']) if opts.output is None else opts.output
 
         pull_all_files(destination_path, course)
+
+
+def is_valid_url(possible_url):
+    result = urlparse(possible_url)
+    return all([result.scheme, result.netloc])
+
+
+def login(args):
+    if is_valid_url(args.destination):
+        url = args.destination
+        history_filename = urlparse(url).netloc
+        token = getpass('Enter access token: ')
+    else:
+        config_file = join(clanvas_dir(), 'config')
+        try:
+            config = parse_clanvas_config_file(config_file) if isfile(config_file) else {}
+        except InvalidClanvasConfigurationException as e:
+            print(f'{config_file}: {e.message}')
+            print(f'{config_file}: terminating, bad configuration.')
+            sys.exit(1)
+
+        if args.destination in config:
+            entry = config[args.destination]
+            url = entry["url"]
+            history_filename = args.destination
+            token = entry["token"]
+        else:
+            print(f'No entry for name "{args.name}" in clanvas config')
+            sys.exit(1)
+
+    history_dir = join(clanvas_dir(), 'history')
+    makedirs(history_dir, exist_ok=True)
+    history_file = join(history_dir, history_filename)
+    clanvas = Clanvas(url, token, persistent_history_file=history_file, persistent_history_length=5000)
+    call_eagerly(clanvas.get_courses, clanvas.current_user_profile)
+    return clanvas
 
 
 def main():
@@ -257,30 +261,13 @@ def main():
 
     colorama.init()  # Windows color support
 
-    cmd = Clanvas()
-
     parser = argparse.ArgumentParser()
-    parser.add_argument('name', nargs='?', default=None)
+    parser.add_argument('destination', help='Canvas URL or the hostname of entry from Clanvas config')
     args = parser.parse_args()
 
-    if args.name:
-        config_file = join(expanduser('~'), '.clanvas', 'config')
-
-        try:
-            config = parse_clanvas_config_file(config_file) if isfile(config_file) else {}
-        except InvalidClanvasConfigurationException as e:
-            print(f'{config_file}: {e.message}')
-            print(f'{config_file}: terminating, bad configuration.')
-            sys.exit(1)
-
-        if args.name in config:
-            entry = config[args.name]
-            cmd.onecmd(f'login -q {entry["url"]} {entry["token"]}')
-        else:
-            print(f'No entry for name "{args.name}" in clanvas config')
-
-    cmd.allow_cli_args = False
-    cmd.cmdloop()
+    makedirs(clanvas_dir(), exist_ok=True)
+    clanvas = login(args)
+    clanvas.cmdloop()
 
 
 if __name__ == "__main__":

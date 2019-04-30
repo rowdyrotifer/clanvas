@@ -9,7 +9,7 @@ Command-line shell client for the [Canvas Learning Management System](https://gi
 ### Available Commands
 
 In the Clanvas shell, all commands already on your system `PATH` are available.
-You can `cd` and `ls` as you please.
+You can `ls` and `grep` as you please.
 
 In addition, the shell provides the following commands:
 
@@ -53,18 +53,32 @@ Clanvas relies on the capabilities provided by `GNU readline` or an equivalent l
 | macOS   | Apple ships it's operating system with the BSD-licensed `editline` since `GNU readline` is released under a GPL (copyleft) license. By default, Clanvas will try to use `editline` if this is what is available. However, certain features like navigating previous commands and tab completion may not work correctly in all cases. The best/recommended solution is to ensure you are using Python with `GNU readline`. See [GNU readline on macOS](#gnu-readline-on-macos) for more details. |
 | Windows | Currently Windows is untested, but the we recommend installing the `pyreadline` Python module.                                                                                                                                                                                                                                                                                                                                                                                                  |
 
-### Example Usage
-Start the Clanvas shell
+### Login
+Start the Clanvas shell by providing a config entry or URL.
+
+For example, with the following config file at `~/.clanvas/config`...
 ```
-bob@host:~$ clanvas
-$
+Host school
+	Url https://canvas.school.edu
+	Token bOYc5cOIldA3eB9NTr7X0Um9Z8TPMACb0HtdgHTMtp10T5UKH0b4HOqTmOCvWZlYRpJ9dN
 ```
-Login using an API token (see Generating an API Token)
+
+...login can be done with the hostname `school`
 ```
-$ login https://canvas.school.edu bOYc5cOIldA3eB9NTr7X0Um9Z8TPMACb0HtdgHTMtp10T5UKH0b4HOqTmOCvWZlYRpJ9dN
-Logged in as Bob Roberts (bmr23)
+$ clanvas school 
 bmr23@canvas.school.edu:~:~ $
 ```
+
+Otherwise, if a URL can is provided then you are prompted for an access token:
+```
+$ clanvas https://canvas.school.edu
+Enter access token: 
+```
+
+See [Generating an API Token](#generating-an-api-token) for more info on the access token.
+
+### Example Usage
+
 Run commands
 ```
 bmr23@canvas.school.edu:~:~ $ lc -l
@@ -105,19 +119,6 @@ bmr23@canvas.school.edu:EECS 325:~ $ tree ~/canvas/courses/EECS325-7832/files
 ├── Project1Files.zip
 ├── Project1Instructions.pdf
 └── Syllabus.pdf
-```
-
-### Automatic Login
-Clanvas will look for a `.clanvasrc` file in your home directory to execute initial commands. Here you can insert the login command so that logging in is done automatically on start-up
-
-```
-echo "login https://canvas.school.edu bOYc5cOIldA3eB9NTr7X0Um9Z8TPMACb0HtdgHTMtp10T5UKH0b4HOqTmOCvWZlYRpJ9dN" > ~/.clanvasrc
-```
-
-**Important**: you should change the permissions of this file so that other users of your computer cannot read your API token and consequently gain access your account. `chmod 600` specifies that only the file owner may read and write the file.
-
-```
-chmod 600 ~/.clanvasrc
 ```
 
 ### Generating an API Token
