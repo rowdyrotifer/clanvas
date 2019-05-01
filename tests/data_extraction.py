@@ -2,13 +2,12 @@ import argparse
 import json
 import os
 import random
-import shlex
 import string
 import sys
 
 from canvasapi import Canvas
 
-from clanvas import interfaces
+from clanvas.clanvas import get_login_entry
 
 USER_ACCOUNT_ID = 101
 COURSE_CREATOR_ACCOUNT_ID = 501
@@ -73,19 +72,13 @@ def get_course_fixtures(canvas):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate data from existing Canvas server.')
+    parser.add_argument('hostname', help='hostname for clanvas config entry with login credentials')
     parser.add_argument('action', help='name of a get_ACTION method to run with a canvas object')
     parser.add_argument('--output', '-o', default=None, help='file to output the extracted data to')
-    parser.add_argument('--rcfile', '-r', help='get canvas credentials using a login command in the provided rcfile')
-
     args = parser.parse_args()
-    fh = sys.stdout if args.output is None else open(os.path.expanduser(args.output), 'w')
 
-    rcpath = os.path.expanduser(args.rcfile)
-    if os.path.exists(rcpath):
-        with open(rcpath, 'r') as rcfile:
-            login_command = next(line for line in rcfile.readlines() if line.startswith('login '))
-            login_args = interfaces.login_parser.parse_args(shlex.split(login_command)[1:])
-            canvas = Canvas(login_args.url, login_args.token)
+    url, token, _ = get_login_entry(args.hostname)
+    canvas = Canvas(url, token)
 
     if canvas is None:
         input_url = input('Please enter Canvas URL: ')
@@ -94,5 +87,5 @@ if __name__ == '__main__':
 
     output = locals()[f'get_{args.action}'](canvas)
 
+    fh = sys.stdout if args.output is None else open(os.path.expanduser(args.output), 'w')
     json.dump(output, fh, indent=2)
-
