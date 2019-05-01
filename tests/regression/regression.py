@@ -11,8 +11,6 @@ import requests_mock
 from clanvas.clanvas import Clanvas
 from tests.register import register_uris
 
-login_command = 'login https://example.com 123'
-
 login_requirements = {'user': {'self', 'profile'}, 'courses': {'courses'}}
 
 script_requirements = {
@@ -49,8 +47,7 @@ def generate_transcript(command_name, script_name):
 
 
 def _generate_transcript(clanvas_file, output_file):
-    clanvas = Clanvas()
-    clanvas.onecmd(login_command)
+    clanvas = Clanvas('https://example.com', '123')
 
     with open(clanvas_file, 'r') as f:
         for line in f.readlines():
@@ -64,8 +61,8 @@ def test_transcript(command_name, script_name):
 
 
 def _test_transcript(_, output_file):
-    clanvas = Clanvas(transcript_files=[output_file])
-    clanvas.onecmd(login_command)
+    clanvas = Clanvas('https://example.com', '123', transcript_files=[output_file])
+
     clanvas.cmdloop()  # runs the regression test automagically from the transcript
 
 

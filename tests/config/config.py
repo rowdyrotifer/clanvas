@@ -9,8 +9,9 @@ def parse(filename):
 
 
 expected_1 = {}
-expected_2 = {"site1": {"url": "canvas.website1.edu", "token": "1234~ZDUtxyIhxCOYNwDd1Szk8KRy6YZ31jZduvmozrfmDhQe3bLfDTx7AnwPOqofxmfU"}}
-expected_3 = {"site1": {"url": "canvas.website1.edu", "token": "1234~ZDUtxyIhxCOYNwDd1Szk8KRy6YZ31jZduvmozrfmDhQe3bLfDTx7AnwPOqofxmfU"}, "site2": {"url": "canvas.website2.edu", "token": "apW5q2kxoi9o6tUXM7gNKhvtOLMPrS49jZNbp7g9JRoMuKkKdhDLTRPD3sluDIzx"}}
+expected_2 = {"site1": {"url": "https://canvas.website1.edu", "token": "1234~ZDUtxyIhxCOYNwDd1Szk8KRy6YZ31jZduvmozrfmDhQe3bLfDTx7AnwPOqofxmfU"}}
+expected_3 = {"site1": {"url": "https://canvas.website1.edu", "token": "1234~ZDUtxyIhxCOYNwDd1Szk8KRy6YZ31jZduvmozrfmDhQe3bLfDTx7AnwPOqofxmfU"},
+              "site2": {"url": "https://canvas.website2.edu", "token": "apW5q2kxoi9o6tUXM7gNKhvtOLMPrS49jZNbp7g9JRoMuKkKdhDLTRPD3sluDIzx"}}
 
 
 class TestConfigParser(unittest.TestCase):
