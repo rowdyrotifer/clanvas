@@ -1,5 +1,4 @@
 import os
-import os
 import unittest
 from argparse import ArgumentParser
 from functools import reduce
@@ -28,7 +27,8 @@ script_requirements = {
 
 
 class TestRegression(unittest.TestCase):
-    def run_all_regression_tests(self):
+
+    def test_regression(self):
         for command_name, script_names in script_requirements.items():
             for script_name in script_names.keys():
                 with self.subTest():
@@ -68,7 +68,7 @@ def _test_transcript(_, output_file):
 
 def regression_action(command_name, script_name, action):
     if command_name not in script_requirements or script_name not in script_requirements[command_name]:
-        raise ValueError(f'Script requirements for {script_name} not specified in regression.py')
+        raise ValueError(f'Script requirements for {script_name} not specified in test_regression.py')
 
     with requests_mock.Mocker() as m:
         register_uris(script_requirements[command_name][script_name], m)

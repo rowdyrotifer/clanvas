@@ -24,10 +24,3 @@ class TestConfigParser(unittest.TestCase):
 
     def test_3(self):
         self.assertDictEqual(expected_3, parse('config_3'))
-
-
-# if __name__ == '__main__':
-#     import json
-#     print(json.dumps(parse('config_2')))
-
-

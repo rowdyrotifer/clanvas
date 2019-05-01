@@ -12,8 +12,7 @@ matrix:
 install:
 - pip install -e .[dev]
 script:
-- python -m unittest -v tests.regression.regression.TestRegression.run_all_regression_tests
-- python -m unittest -v tests.config.config.TestConfigParser
+- python -m unittest -v tests.suite
 notifications:
   slack:
     rooms:

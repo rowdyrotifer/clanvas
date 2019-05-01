@@ -219,9 +219,9 @@ def is_valid_url(possible_url):
     return all([result.scheme, result.netloc])
 
 
-def login(args):
-    if is_valid_url(args.destination):
-        url = args.destination
+def get_login_entry(destination):
+    if is_valid_url(destination):
+        url = destination
         history_filename = urlparse(url).netloc
         token = getpass('Enter access token: ')
     else:
@@ -233,17 +233,24 @@ def login(args):
             print(f'{config_file}: terminating, bad configuration.')
             sys.exit(1)
 
-        if args.destination in config:
-            entry = config[args.destination]
+        if destination in config:
+            entry = config[destination]
             url = entry["url"]
-            history_filename = args.destination
+            history_filename = destination
             token = entry["token"]
         else:
-            print(f'No entry for name "{args.name}" in clanvas config')
+            print(f'No entry for name "{destination}" in clanvas config')
             sys.exit(1)
+
+    return url, token, history_filename
+
+
+def login(destination):
+    url, token, history_filename = get_login_entry(destination)
 
     history_dir = join(clanvas_dir(), 'history')
     makedirs(history_dir, exist_ok=True)
+
     history_file = join(history_dir, history_filename)
     clanvas = Clanvas(url, token, persistent_history_file=history_file, persistent_history_length=5000)
     call_eagerly(clanvas.get_courses, clanvas.current_user_profile)
@@ -261,12 +268,13 @@ def main():
 
     colorama.init()  # Windows color support
 
+    makedirs(clanvas_dir(), exist_ok=True)
+
     parser = argparse.ArgumentParser()
     parser.add_argument('destination', help='Canvas URL or the hostname of entry from Clanvas config')
     args = parser.parse_args()
 
-    makedirs(clanvas_dir(), exist_ok=True)
-    clanvas = login(args)
+    clanvas = login(args.destination)
     clanvas.cmdloop()
 
 

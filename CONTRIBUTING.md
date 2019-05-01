@@ -187,7 +187,7 @@ $ which python
 Now you install all the development requirements to your virtual environment. 
 
 ```
-pip install -r dev_requirements.txt
+pip install -e .[dev]
 ```
 
 If you are using PyCharm, you should add the venv python (see 
@@ -201,24 +201,37 @@ know you're working on an issue so that we don't have multiple people working
 on the same task. If it's not an existing issue, we want to make sure you don't
 go developing some code only to be later told that the feature is not needed.
 
-### Running regression tests
+### Running tests
 
-Currently there is a single method that runs all the regression tests
-located in the tests/regression folder.
+The entire test suite can be run using `suite.py`.
+
+This includes unit tests and regression tests.
 
 ```
-python -m unittest -v tests.regression.regression.TestRegression.run_all_regression_tests
+python -m unittest -v tests.suite
 ```
 
 Always run this after making any changes to make sure you haven't accidentally messed up
-existing behavior.
+existing behavior. [Travis CI](https://travis-ci.org/marklalor/clanvas) will
+also run this to check any changes pushed. 
+
+### Running regression tests
+
+Currently there is a single test case that runs all regression tests
+located in the `tests/regression` folder.
+
+```
+python -m unittest -v tests.regression.test_regression.TestRegression
+```
+
+### Updating regression tests
 
 If you change existing behavior, update the unit tests running
 regression.py and providing a name for the commands to be updated.
 
 For example, if you want to regenerate transcripts for the `lc` command after making changes:
 ```
-python tests/regression.py lc
+python tests/test_regression.py lc
 ```
 
 ### Creating new regression tests
@@ -317,9 +330,3 @@ contributing to open source projects in general.
 * [Github Guide: *How to Contribute to Open Source*](https://opensource.guide/how-to-contribute/)
 * [Video Tutorials: *How to Contribute to an Open Source Project on GitHub*](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github)
 * [Github: *Fork a repo*](https://help.github.com/articles/fork-a-repo/)
-
-### Case students
-
-If you're a Case student, you should drop by the ACM general body meetings on Wednesdays at 6:30PM,
-there we can discuss the project more, and if you're a beginner, we can find a time to get you
-completely set up one step at a time for contributing.
