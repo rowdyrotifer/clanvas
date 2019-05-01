@@ -7,7 +7,7 @@ with codecs.open('README.md', encoding='utf8') as readme:
 
 setup(
     name='clanvas',
-    version='0.2.4',
+    version='0.3.0',
     url='https://github.com/marklalor/clanvas',
     license='MIT',
     author='Mark Lalor',
@@ -25,8 +25,9 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'Environment :: Console',
+        'Intended Audience :: Education',
         'Intended Audience :: Developers',
         'Topic :: Education',
         'Topic :: System :: Shells',

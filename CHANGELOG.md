@@ -1,3 +1,14 @@
+### 0.3.0
+* Change rcfile login method to use new clanvas config (similar to SSH config).
+Usage instructions now located in [README](README.md).
+* No longer run `~/.clanvasrc` file on startup.
+* Add descriptions to tab completion. For example course completion now includes
+course titles and assignment completion now includes assignment names.
+* Save/load persistent `readline` history.
+* Removed `requirements.txt` and `dev_requirements.txt`, the dependencies can be resolved
+with `pip install -e .` and `pip install -e .[dev]`
+* Set dependencies for `cmd2` and `canvasapi` to exact versions for stability.   
+
 ### 0.2.4
 * Fix bug which caused crash if no courses were associated with the account.
 * Fix bug which caused crash if a course has no name.
